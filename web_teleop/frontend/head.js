@@ -1,5 +1,6 @@
 Head = function(ros) {
   // HTML elements
+  // alert("AM I WORKING?");
   var desiredHeadPan = document.querySelector('#desiredHeadPan');
   var desiredHeadTilt = document.querySelector('#desiredHeadTilt');
 
@@ -69,7 +70,15 @@ Head = function(ros) {
 
   // Method to set the height.
   this.setHead = function(pan, tilt) {
-    // TODO? var height = Math.min(Math.max(0.0, height), 0.4);
+    console.log(pan);
+    console.log(tilt);
+
+    pan = parseFloat(pan);
+    tilt = parseFloat(tilt);
+
+    console.log(pan);
+    console.log(tilt);
+
     var request = new ROSLIB.ServiceRequest({
       pan: pan,
       tilt: tilt
@@ -79,6 +88,8 @@ Head = function(ros) {
 
   // Set the height when the button is clicked.
   headButton.addEventListener('click', function() {
-    that.setHead(desiredPan, desiredTilt);
+    // console.log("SUCK M YASS");
+    // alert("PLZ WORK");
+    that.setHead(desiredHeadPan, desiredHeadTilt);
   });
 }
