@@ -29,7 +29,7 @@ class Arm(object):
     def __init__(self):
         # TODO: Create actionlib client
 	self.client = actionlib.SimpleActionClient(ACTION_NAME, control_msgs.msg.FollowJointTrajectoryAction)
-	self.client.wait_for_server()        
+	self.client.wait_for_server()
 
     def move_to_joints(self, arm_joints):
         """Moves the robot's arm to the given joints.
@@ -40,15 +40,14 @@ class Arm(object):
         """
         # TODO: Create a trajectory point
 	jtp = trajectory_msgs.msg.JointTrajectoryPoint()
-	
+
 	jtp.positions.extend(arm_joints.values())
 	jtp.time_from_start = rospy.Duration(ARM_MOVEMENT_TIME)
 
 	goal = control_msgs.msg.FollowJointTrajectoryGoal()
-	
+
 	goal.trajectory.joint_names.extend(arm_joints.names())
 	goal.trajectory.points.append(jtp)
 
-	self.client.send_goal(goal)	
+	self.client.send_goal(goal)
 	self.client.wait_for_result()
-        
