@@ -8,6 +8,8 @@
     <script src="base.js"></script>
     <script src="torso.js"></script>
     <script src="head.js"></script>
+    <script src="arm.js"></script>
+    <script src="gripper.js"></script>
     <script src="app.js"></script>
   </head>
   <body onload="init()">
@@ -18,11 +20,9 @@
       <input id="websocketUrl" type="text"></input>
       <input id="websocketButton" type="button" value="Reconnect"></input>
     </div>
-    <!--
     <div id="camera">
       <img src="//localhost:8000/stream?topic=/head_camera/rgb/image_raw"></img>
     </div>
-    -->
     <div id="base">
       <h2>Base control</h2>
       <table class="base-arrows">
@@ -40,7 +40,7 @@
       <h2>Torso control</h2>
       Current torso height: <span id="torsoHeight"></span><br />
       <label for="torsoSlider">Set torso height:</label>
-      <input id="torsoSlider" type="range" min="0.0" max="0.4" step="0.05"></input>
+      <input id="torsoSlider" type="range" min="0.0" max="0.4" step="0.010"></input>
       <span id="desiredTorsoHeight"></span>
       <input id="torsoButton" type="button" value="Set"></input>
     </div>
@@ -50,11 +50,26 @@
       <input id="headPanSlider" type="range" min="-1.5" max="1.5" step="0.05"></input>
       <span id="desiredHeadPan"></span>
 
+      <br />
+
       <label for="headTiltSlider">Set head tilt:</label>
       <input id="headTiltSlider" type="range" min="-0.7" max="1.5" step="0.05"></input>
       <span id="desiredHeadTilt"></span>
 
       <input id="headButton" type="button" value="Set Head"></input>
+    </div>
+    <div id="arm">
+      <h2>Arm control</h2>
+      <span id="currentArm"></span>
+
+      <input id="desiredArm" type="text"></input>
+
+      <input id="armButton" type="button" value="Set Arm"></input>
+    </div>
+
+    <div id="gripper">
+      <h2>Gripper control</h2>
+      <input id="gripperToggle" type="checkbox" value="Toggle Gripper"></input>
     </div>
   </body>
 </html>
