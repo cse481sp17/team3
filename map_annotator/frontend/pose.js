@@ -1,12 +1,22 @@
-Pose = function(ros, name) {
+Pose = function(ros, name, userActionClient) {
   var that = this;
   this.name = name;
 
+  function makeUserMessage(commandArg, nameArg) {
+    userMessage = new ROSLIB.ServiceRequest({
+      command: commandArg,
+      name: nameArg
+    });
+    userActionClient.callService(userMessage, function(result){});
+  } 
+
   function handleGoTo() {
+    makeUserMessage("goto", name)
     console.log('Go to ' + name + ' clicked.');
   }
 
   function handleDelete() {
+    makeUserMessage("delete", name)
     console.log('Delete ' + name + ' clicked.');
   }
 
@@ -28,4 +38,5 @@ Pose = function(ros, name) {
     node.appendChild(deleteNode);
     return node;
   }
+
 }
