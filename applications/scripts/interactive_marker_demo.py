@@ -12,7 +12,7 @@ class DestinationMarker(object):
         # ... Initialization, marker creation, etc. ...
         self._server = server
         self.int_marker = InteractiveMarker()
-        self.int_marker.header.frame_id = "base_link"
+        self.int_marker.header.frame_id = "odom"
         self.int_marker.name = name
         self.int_marker.pose.position.x = x
         self.int_marker.pose.position.y = y
@@ -91,24 +91,26 @@ class Driver(object):
                 goal = copy.deepcopy(self.goal)
                 absolute_goal = copy.deepcopy(self.goal) # gets overwritten
 
-                absolute_goal.x = self._base.latest_odom.position.x
-                absolute_goal.y = self._base.latest_odom.position.y
+                absolute_goal.x += self._base.latest_odom.position.x
+                absolute_goal.y += self._base.latest_odom.position.y
                 theta = self._base.quat_to_yaw(self._base.latest_odom.orientation)
-                print("theta is", theta * 180 / math.pi)
-                print("original absolute goal is", absolute_goal.x + self._base.latest_odom.position.x, "and", absolute_goal.y + self._base.latest_odom.position.y)
-                x_prime = goal.x * math.cos(theta) - goal.y * math.sin(theta)
-                y_prime = goal.y * math.cos(theta) + goal.x * math.sin(theta)
-                absolute_goal.x += x_prime
-                absolute_goal.y += y_prime
-
+                #print("theta is", theta * 180 / math.pi)
+                #print("original absolute goal is", absolute_goal.x + self._base.latest_odom.position.x, "and", absolute_goal.y + self._base.latest_odom.position.y)
+                #x_prime = goal.x * math.cos(theta) - goal.y * math.sin(theta)
+                #y_prime = goal.y * math.cos(theta) + goal.x * math.sin(theta)
+                #absolute_goal.x += x_prime
+                #absolute_goal.y += y_prime
                 # TODO: restart the turn/move sequence
                 state = 'turn'
-            dx = absolute_goal.x - self._base.latest_odom.position.x
-            dy = absolute_goal.y - self._base.latest_odom.position.y
+
+
+            dx = goal.x - self._base.latest_odom.position.x
+            dy = goal.y - self._base.latest_odom.position.y
+            #print("goal x", goal.x, "goal y", goal.y, "dx", dx, "dy", dy)
             angle = math.atan2(dy, dx)
             # radians to turn = goal angle - our angle
             radians_to_turn = angle - self._base.quat_to_yaw(self._base.latest_odom.orientation)
-            #print("x", self._base.latest_odom.position.x, "y", self._base.latest_odom.position.y, "facing", self._base.quat_to_yaw(self._base.latest_odom.orientation), "goal", absolute_goal)
+            print("x", self._base.latest_odom.position.x, "y", self._base.latest_odom.position.y, "facing", self._base.quat_to_yaw(self._base.latest_odom.orientation), "goal", goal)
 
             if state == 'turn':
                 #print("turning")
@@ -116,7 +118,8 @@ class Driver(object):
                 radians_to_turn = angle - self._base.quat_to_yaw(self._base.latest_odom.orientation)
                 #print("to turn", radians_to_turn)
                 if abs(radians_to_turn) >= 0.1:
-                    self._base.move(0, .5 if radians_to_turn > 0 else -.5)
+                    speed = max(0.25, min(1, abs(radians_to_turn)))
+                    self._base.move(0, speed if radians_to_turn > 0 else -1 * speed)
                 else:
                     state = 'move'
 
@@ -130,7 +133,8 @@ class Driver(object):
                 # Make sure that the robot has the ability to drive backwards if it overshoots
                 if desired_distance > .2:
                     # TODO: possibly adjust speed to slow down when close to the goal
-                    self._base.move(.1, 0)
+                    self._base.move(max(0.05, min(0.5, desired_distance)), 0)
+
 
             rospy.sleep(0.1)
 
