@@ -1,0 +1,9 @@
+string CREATE=create
+string DELETE=delete
+string GOTO=goto
+string LIST=list
+
+string command
+string name
+---
+string[] names

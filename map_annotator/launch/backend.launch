@@ -1,0 +1,4 @@
+<launch>
+  <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" />
+  <node pkg="map_annotator" type="actuators_node.py" name="map_annotator_actuators" />
+</launch>
