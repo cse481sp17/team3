@@ -79,11 +79,11 @@ if __name__ == "__main__":
         if (position == None or abs(cur_pos.x - position.x) > .1 or abs(cur_pos.y - position.y) > .1
             or abs(cur_pos.z - position.z > .1)):
             marker = Marker(
-                        type=Marker.LINE_STRIP,
+                        type=Marker.SPHERE_LIST,
                         id=id_counter,
                         lifetime=rospy.Duration(),
                         pose=Pose(Point(0, 0, 0), Quaternion(0, 0, 0, 1)),
-                        points=[Point(0, 0, 0), Point(.1, .1, 0)],
+                        points=[Point(0, 0, 0)],
                         scale=Vector3(0.06, 0.06, 0.06),
                         header=Header(frame_id='base_link'),
                         color=ColorRGBA(0.0, 1.0, 0.0, 0.8))
