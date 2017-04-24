@@ -5,6 +5,12 @@ PoseList = function(ros) {
 
   var that = this;
 
+  var userActionClient = new ROSLIB.Service({
+    ros: ros,
+    name: 'map_annotator/send_fetch',
+    serviceType: 'map_annotator/SendFetch'
+  });
+
   var sub = new ROSLIB.Topic({
     ros: ros,
     name: '/pose_names',
@@ -17,7 +23,7 @@ PoseList = function(ros) {
     } else {
       poseListDiv.innerHTML = '';
       for (var i=0; i<poseList.length; ++i) {
-        var pose = new Pose(ros, poseList[i]);
+        var pose = new Pose(ros, poseList[i], userActionClient);
         var poseDiv = pose.render();
         poseListDiv.appendChild(poseDiv);
       }
@@ -25,7 +31,8 @@ PoseList = function(ros) {
   }
 
   sub.subscribe(function(message) {
-    render(message.names);
+    console.log(message);
+    render(message.poses);
   });
   render([]);
 
@@ -34,6 +41,11 @@ PoseList = function(ros) {
     if (!name) {
       return;
     }
+    userMessage = new ROSLIB.ServiceRequest({ 
+      command: 'create', 
+      name: name 
+    });
+    userActionClient.callService(userMessage, function(result){console.log("done")});
     console.log('Creating pose with name', name);
   })
 }
