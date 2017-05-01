@@ -6,6 +6,7 @@ import rospy
 from moveit_python import PlanningSceneInterface
 
 from geometry_msgs.msg import Pose, Point, Quaternion, PoseStamped
+from moveit_msgs.msg import OrientationConstraint
 
 def wait_for_time():
     """Wait for simulated time to begin.
@@ -34,14 +35,14 @@ def main():
                           table_x, table_y, table_z)
 
     # Create divider obstacle
-    planning_scene.removeCollisionObject('divider')
-    size_x = 0.3
-    size_y = 0.01
-    size_z = 0.4
-    x = table_x - (table_size_x / 2) + (size_x / 2)
-    y = 0
-    z = table_z + (table_size_z / 2) + (size_z / 2)
-    planning_scene.addBox('divider', size_x, size_y, size_z, x, y, z)
+    #planning_scene.removeCollisionObject('divider')
+    #size_x = 0.3
+    #size_y = 0.01
+    #size_z = 0.4
+    #x = table_x - (table_size_x / 2) + (size_x / 2)
+    #y = 0
+    #z = table_z + (table_size_z / 2) + (size_z / 2)
+    #planning_scene.addBox('divider', size_x, size_y, size_z, x, y, z)
 
     # Before moving to the first pose
     planning_scene.removeAttachedObject('tray')
@@ -59,6 +60,15 @@ def main():
     pose2.pose.position.y = 0.3
     pose2.pose.position.z = 0.75
     pose2.pose.orientation.w = 1
+
+    oc = OrientationConstraint()
+    oc.header.frame_id = 'base_link'
+    oc.link_name = 'wrist_roll_link'
+    oc.orientation.w = 1
+    oc.absolute_x_axis_tolerance = 0.1
+    oc.absolute_y_axis_tolerance = 0.1
+    oc.absolute_z_axis_tolerance = 3.14
+    oc.weight = 1.0
 
     arm = fetch_api.Arm()
     def shutdown():

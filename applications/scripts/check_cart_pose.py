@@ -33,7 +33,6 @@ def main():
     ps.pose.position.y = y
     ps.pose.position.z = z
     ps.pose.orientation.w = 1
-
     if command == 'plan':
         error = arm.check_pose(ps, allowed_planning_time=1.0)
         if error is None:
