@@ -402,8 +402,8 @@ def main():
     auto_pick_im_server = InteractiveMarkerServer('auto_pick_im_server', q_size=2)
     teleop = GripperTeleop(arm, gripper, im_server)
     auto_pick = AutoPickTeleop(arm, gripper, auto_pick_im_server)
-    # teleop.start()
-    auto_pick.start()
+    teleop.start()
+    # auto_pick.start()
     print("before spin")
     rospy.spin()
 
