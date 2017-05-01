@@ -4,7 +4,7 @@ import control_msgs.msg
 import trajectory_msgs.msg
 
 from .moveit_goal_builder import MoveItGoalBuilder
-from moveit_msgs.msg import MoveItErrorCodes, MoveGroupAction
+from moveit_msgs.msg import MoveItErrorCodes, MoveGroupAction, OrientationConstraint
 from moveit_msgs.srv import GetPositionIK, GetPositionIKRequest
 
 import rospy
@@ -107,7 +107,8 @@ class Arm(object):
                      plan_only=False,
                      replan=False,
                      replan_attempts=5,
-                     tolerance=0.01):
+                     tolerance=0.01,
+                     orientation_constraint=None):
         """Moves the end-effector to a pose, using motion planning.
 
         Args:
@@ -141,6 +142,8 @@ class Arm(object):
         goal_builder.replan = replan
         goal_builder.replan_attempts = replan_attempts
         goal_builder.tolerance = tolerance
+        if orientation_constraint is not None:
+            goal_builder.add_path_orientation_constraint(orientation_constraint)
         goal = goal_builder.build()
         # Use execution_timeout for wait_for_result()
         self._move_group_client.send_goal_and_wait(goal, rospy.Duration(execution_timeout))

@@ -54,7 +54,7 @@ class MoveItGoalBuilder(object):
         self.max_velocity_scaling_factor = 0
         self.num_planning_attempts = 1
         self.plan_only = False
-        self.planner_id = ''
+        self.planner_id = 'RRTConnectkConfigDefault'
         self.replan = False
         self.replan_attempts = 5
         self.replan_delay = 1
@@ -88,7 +88,7 @@ class MoveItGoalBuilder(object):
         self._joint_positions = joint_positions
         self._pose_goal = None
 
-    def add_path_orientation_contraint(self, o_constraint):
+    def add_path_orientation_constraint(self, o_constraint):
         """Adds an orientation constraint to the path.
         Args:
             o_constraint: A moveit_msgs/OrientationConstraint.
@@ -160,7 +160,7 @@ class MoveItGoalBuilder(object):
             goal.request.goal_constraints.append(c1)
 
         # Set path constraints
-        goal.request.path_constraints.orientation_constraints = self._orientation_contraints 
+        goal.request.path_constraints.orientation_constraints = self._orientation_contraints
 
         # Set trajectory constraints
 
