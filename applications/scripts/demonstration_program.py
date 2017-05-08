@@ -1,6 +1,9 @@
 #! /usr/bin/env python
 
 from geometry_msgs.msg import PoseStamped, Quaternion, Point, Pose
+import robot_controllers_msgs.msg
+# from robot_controllers_msgs import ControllerState
+
 import ar_track_alvar_msgs.msg
 
 import tf
@@ -10,6 +13,7 @@ from fetch_api import Arm, Gripper
 import rospy
 
 import copy
+import actionlib
 
 import numpy as np
 
@@ -124,7 +128,7 @@ class MoveAction(Action):
             needed_marker.pose.pose.position = [former_pose.position.x, former_pose.position.y, former_pose.position.z]
             needed_marker.pose.pose.orientation = [former_pose.orientation.x, former_pose.orientation.y, former_pose.orientation.z, former_pose.orientation.w]
             # print(former_pose)
-
+            # needed_marker.pose.pose.position[0] += 0.1
             tag_t2 = pose_to_full_matrix(needed_marker.pose.pose)
 
             tag_wrist_t1 = np.dot(np.linalg.pinv(tag_t1), gripper_t1)
@@ -244,6 +248,17 @@ def create_new_program():
     print('\t done | yay done')
     print('')
 
+    # !
+    _controller_client = actionlib.SimpleActionClient('query_controller_states', robot_controllers_msgs.msg.QueryControllerStatesAction)
+    goal = robot_controllers_msgs.msg.QueryControllerStatesGoal()
+    state = robot_controllers_msgs.msg.ControllerState()
+    state.name = 'arm_controller/follow_joint_trajectory'
+    state.state = robot_controllers_msgs.msg.ControllerState.STOPPED
+    goal.updates.append(state)
+    _controller_client.send_goal(goal)
+    _controller_client.wait_for_result()
+    # !
+
     gripper = Gripper()
     arm = Arm()
 
@@ -347,6 +362,15 @@ def main():
             new_program = create_new_program()
             programs[user_input.split()[1]] = new_program
         elif (user_input.split()[0] == 'execute'):
+            _controller_client = actionlib.SimpleActionClient('query_controller_states', robot_controllers_msgs.msg.QueryControllerStatesAction)
+            goal = robot_controllers_msgs.msg.QueryControllerStatesGoal()
+            state = robot_controllers_msgs.msg.ControllerState()
+            state.name = 'arm_controller/follow_joint_trajectory'
+            state.state = robot_controllers_msgs.msg.ControllerState.RUNNING
+            goal.updates.append(state)
+            _controller_client.send_goal(goal)
+            _controller_client.wait_for_result()
+
             programs[user_input.split()[1]].execute()
         elif (user_input == 'list'):
             print(', '.join(programs))
