@@ -27,7 +27,7 @@ def main():
     planning_scene.removeCollisionObject('bottom_shelf')
     # planning_scene.addBox('top_shelf', 0.32, 1, 0.4, 0.99, 0, 1.64)
     # planning_scene.addBox('bottom_shelf', 0.5, 1, 1.09, 0.9, 0, 0.545)
-    planning_scene.addBox('bottom_shelf', 0.5, 1, 0.5, 0.9, 0, 0.545)
+    planning_scene.addBox('bottom_shelf', 0.5, 1, 0.5, 0.9, 0, 0.30)
 
     rospy.sleep(2)
 
