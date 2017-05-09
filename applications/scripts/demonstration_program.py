@@ -212,7 +212,8 @@ def wait_for_time():
 def get_live_marker(tag_id):
     reader = ArTagReader()
     ar_subscriber = rospy.Subscriber('/ar_pose_marker', ar_track_alvar_msgs.msg.AlvarMarkers, callback=reader.callback)
-    while len(reader.markers) == 0:
+    while len(reader.markers) == 0 and not is_in_marker(reader.markers, tag_id):
+        print('trying to find tag')
         rospy.sleep(0.1)
 
     needed_marker = None
@@ -223,10 +224,17 @@ def get_live_marker(tag_id):
 
     return needed_marker
 
+def is_in_marker(markers, tag_id):
+    for marker in markers:
+        if marker.id == tag_id:
+            return True
+    return False
+
 def get_live_markers():
     reader = ArTagReader()
     ar_subscriber = rospy.Subscriber('/ar_pose_marker', ar_track_alvar_msgs.msg.AlvarMarkers, callback=reader.callback)
     while len(reader.markers) == 0:
+        print('trying to find tag')
         # print("lol")
         rospy.sleep(0.1)
 
@@ -249,14 +257,14 @@ def create_new_program():
     print('')
 
     # !
-    _controller_client = actionlib.SimpleActionClient('query_controller_states', robot_controllers_msgs.msg.QueryControllerStatesAction)
-    goal = robot_controllers_msgs.msg.QueryControllerStatesGoal()
-    state = robot_controllers_msgs.msg.ControllerState()
-    state.name = 'arm_controller/follow_joint_trajectory'
-    state.state = robot_controllers_msgs.msg.ControllerState.STOPPED
-    goal.updates.append(state)
-    _controller_client.send_goal(goal)
-    _controller_client.wait_for_result()
+    # _controller_client = actionlib.SimpleActionClient('query_controller_states', robot_controllers_msgs.msg.QueryControllerStatesAction)
+    # goal = robot_controllers_msgs.msg.QueryControllerStatesGoal()
+    # state = robot_controllers_msgs.msg.ControllerState()
+    # state.name = 'arm_controller/follow_joint_trajectory'
+    # state.state = robot_controllers_msgs.msg.ControllerState.STOPPED
+    # goal.updates.append(state)
+    # _controller_client.send_goal(goal)
+    # _controller_client.wait_for_result()
     # !
 
     gripper = Gripper()
@@ -352,33 +360,44 @@ def main():
     programs = {}
 
     while True:
-        print_main_actions()
+        try:
+            print_main_actions()
 
-        user_input = raw_input()
-        if len(user_input.split()) < 1:
+            user_input = raw_input()
+            if len(user_input.split()) < 1:
+                continue
+
+            if (user_input.split()[0] == 'program'):
+                new_program = create_new_program()
+                programs[user_input.split()[1]] = new_program
+            elif (user_input.split()[0] == 'execute'):
+                # print('1')
+                # _controller_client = actionlib.SimpleActionClient('query_controller_states', robot_controllers_msgs.msg.QueryControllerStatesAction)
+                # goal = robot_controllers_msgs.msg.QueryControllerStatesGoal()
+                # state = robot_controllers_msgs.msg.ControllerState()
+                # state.name = 'arm_controller/follow_joint_trajectory'
+                # state.state = robot_controllers_msgs.msg.ControllerState.RUNNING
+                # goal.updates.append(state)
+                # print('2')
+                # _controller_client.send_goal(goal)
+                # print('3')
+                # _controller_client.wait_for_result()
+
+                # if user_input.split()[1] not in programs:
+                #     print('lol')
+                #     continue
+                print('?????')
+                programs[user_input.split()[1]].execute()
+            elif (user_input == 'list'):
+                print(', '.join(programs))
+                print('')
+            elif (user_input == 'exit'):
+                break
+            else:
+                print('try again dude')
+        except:
+            print('DUDE')
             continue
-
-        if (user_input.split()[0] == 'program'):
-            new_program = create_new_program()
-            programs[user_input.split()[1]] = new_program
-        elif (user_input.split()[0] == 'execute'):
-            _controller_client = actionlib.SimpleActionClient('query_controller_states', robot_controllers_msgs.msg.QueryControllerStatesAction)
-            goal = robot_controllers_msgs.msg.QueryControllerStatesGoal()
-            state = robot_controllers_msgs.msg.ControllerState()
-            state.name = 'arm_controller/follow_joint_trajectory'
-            state.state = robot_controllers_msgs.msg.ControllerState.RUNNING
-            goal.updates.append(state)
-            _controller_client.send_goal(goal)
-            _controller_client.wait_for_result()
-
-            programs[user_input.split()[1]].execute()
-        elif (user_input == 'list'):
-            print(', '.join(programs))
-            print('')
-        elif (user_input == 'exit'):
-            break
-        else:
-            print('try again dude')
 
 if __name__ == '__main__':
     main()
