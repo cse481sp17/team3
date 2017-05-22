@@ -16,17 +16,17 @@ class Gripper(object):
     MAX_EFFORT = 100  # Max grasp force, in Newtons
 
     def __init__(self):
-	self.client = actionlib.SimpleActionClient(ACTION_NAME, control_msgs.msg.GripperCommandAction)
-	self.client.wait_for_server()
+        self.client = actionlib.SimpleActionClient(ACTION_NAME, control_msgs.msg.GripperCommandAction)
+        self.client.wait_for_server()
 
     def open(self):
         """Opens the gripper.
         """
-	goal = control_msgs.msg.GripperCommandGoal()
-	goal.command.position = OPENED_POS
-	goal.command.max_effort = self.MAX_EFFORT
-	self.client.send_goal(goal)	
-	self.client.wait_for_result()
+        goal = control_msgs.msg.GripperCommandGoal()
+        goal.command.position = OPENED_POS
+        goal.command.max_effort = self.MAX_EFFORT
+        self.client.send_goal(goal)
+        self.client.wait_for_result()
 
     def close(self, max_effort=MAX_EFFORT):
         """Closes the gripper.
@@ -35,9 +35,8 @@ class Gripper(object):
             max_effort: The maximum effort, in Newtons, to use. Note that this
                 should not be less than 35N, or else the gripper may not close.
         """
-	goal = control_msgs.msg.GripperCommandGoal()
-	goal.command.position = CLOSED_POS
-	goal.command.max_effort = max_effort
-	self.client.send_goal(goal)	
-	self.client.wait_for_result()
-
+        goal = control_msgs.msg.GripperCommandGoal()
+        goal.command.position = CLOSED_POS
+        goal.command.max_effort = max_effort
+        self.client.send_goal(goal)
+        self.client.wait_for_result()

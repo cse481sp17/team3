@@ -398,8 +398,10 @@ def main():
     wait_for_time()
     arm = Arm()
     gripper = Gripper()
+
     im_server = InteractiveMarkerServer('gripper_im_server', q_size=2)
     auto_pick_im_server = InteractiveMarkerServer('auto_pick_im_server', q_size=2)
+    print("after server")
     teleop = GripperTeleop(arm, gripper, im_server)
     auto_pick = AutoPickTeleop(arm, gripper, auto_pick_im_server)
     teleop.start()

@@ -42,9 +42,9 @@ class ActuatorServer(object):
 		rospy.Subscriber('/amcl_pose', geometry_msgs.msg.PoseWithCovarianceStamped, self._handle_pose_callback)
 
 		self.names = {}
-
+		filename = rospy.get_param('~pose_file')
 		try:
-			with open("/home/team3/catkin_ws/src/cse481c/map_annotator/LOL.pickle", "r") as f:
+			with open(filename, "r") as f:
 				self.names = pickle.load(f)
 		except EOFError:
 			self.names = {}
@@ -55,7 +55,12 @@ class ActuatorServer(object):
 
 		self.name_markers = {}
 		self.name_controls = {}
+		pose_message = map_annotator.msg.PoseNames()
+		pose_message.poses = list(self.names.keys())
 
+		self.pose_pub.publish(pose_message)
+
+		print("initiated actuator nodes with", self.names)
 	def _create_marker(self, name):
 		self.name_markers[name] = InteractiveMarker()
 		self.name_markers[name].header.frame_id = "map"
@@ -118,7 +123,7 @@ class ActuatorServer(object):
 		self.server.applyChanges()
 
 	def handle_send_fetch(self, request):
-		rospy.logerr("yo we got fam" + str(request))
+		rospy.loginfo("Attempting: " + str(request))
 		if request.command == request.CREATE:
 			self._handle_create(request.name)
 			self._create_marker(request.name)
@@ -128,7 +133,7 @@ class ActuatorServer(object):
 		elif request.command == request.GOTO:
 			self._handle_goto(request.name)
 		elif request.command == request.LIST:
-			rospy.loginfo('hey Karen')
+			rospy.loginfo('listing')
 		else:
 			rospy.logerr('none of these work')
 
@@ -147,22 +152,26 @@ class ActuatorServer(object):
 
 	def _handle_delete(self, name):
 		if name not in self.names:
-			rospy.loginfo('wtf bro')
+			rospy.loginfo('name not in names')
 		else:
 			del self.names[name]
 
 	def _handle_goto(self, name):
 		new_goto = geometry_msgs.msg.PoseStamped()
 
-		rospy.loginfo(str(new_goto))
+		#rospy.loginfo(str(new_goto))
+		rospy.loginfo("going to %s", name)
+		rospy.loginfo(self.names)
+		#rospy.loginfo(self.names[name])
 		new_goto.header = self.names[name].header
 		new_goto.pose = self.names[name].pose.pose
-		rospy.logerr("wtf" + str(self.names[name].pose.pose))
+		#rospy.logerr("wtf" + str(self.names[name].pose.pose))
 
-		rospy.logerr("bro" + str(new_goto))
+		#rospy.logerr("bro" + str(new_goto))
 		self.goto_pub.publish(new_goto)
 
 	def _handle_pose_callback(self, data):
+		#rospy.loginfo("data being copied from amcl: " + str(data))
 		self.pose = copy.deepcopy(data)
 
 	def pickle_it_up_bro(self):
@@ -175,7 +184,6 @@ def main():
 	wait_for_time()
 
 	server = ActuatorServer()
-
 	move_service = rospy.Service('map_annotator/send_fetch', SendFetch, server.handle_send_fetch)
 
 	rospy.on_shutdown(server.pickle_it_up_bro)

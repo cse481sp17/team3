@@ -1,4 +1,6 @@
 <launch>
   <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" />
-  <node pkg="map_annotator" type="actuators_node.py" name="map_annotator_actuators" />
+  <node pkg="map_annotator" type="actuators_node.py" name="map_annotator_actuators" output="screen" >
+    <param name="pose_file" value="/home/team3/catkin_ws/src/cse481c/map_annotator/stations.pickle" />
+  </node>
 </launch>
