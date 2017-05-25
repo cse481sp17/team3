@@ -1,0 +1,4 @@
+<launch>
+  <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" />
+  <node pkg="order_system" type="actuators_node.py" name="order_system_actuators" />
+</launch>

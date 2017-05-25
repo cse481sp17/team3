@@ -1,3 +1,2 @@
 acciobot_main/Item[] items
-#string[] names
-int64[] quantity
+int64 order_id

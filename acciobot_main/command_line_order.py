@@ -56,7 +56,7 @@ class Cart():
 		items = []
 		for x in self.cart.keys():
 			it = stock._getItem(x)
-			it.quantity = -1 * self.cart[x]
+			it.quantity = self.cart[x]
 			items += [it]
 		return items
 
@@ -116,13 +116,14 @@ def main():
 			done = get_info(cart, stock)
 		try:
 			items = cart._contents(stock)
+			response = send_order(HandleOrderRequest.ORDER,items)
+			print "Your order number is",response
 			stocker = acciobot_main.msg.ItemStock()
 			stocker.items = items
 			stocker.header = std_msgs.msg.Header()
-#			print stocker
+			for x in stocker.items:
+				x.quantity = -1 * x.quantity
 			order_pub.publish(stocker)
-		#response = send_order(HandleOrderRequest.ORDER,items,quantity)
-		#print response
 		except rospy.ServiceException as exc:
 			print("Service did not process request: " + str(exc))
 

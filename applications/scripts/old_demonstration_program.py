@@ -3,12 +3,12 @@
 from geometry_msgs.msg import PoseStamped, Quaternion, Point, Pose
 import robot_controllers_msgs.msg
 # from robot_controllers_msgs import ControllerState
-import pickle
+
 import ar_track_alvar_msgs.msg
 
 import tf
 
-from fetch_api import Arm, Gripper, ArmJoints
+from fetch_api import Arm, Gripper
 
 import rospy
 
@@ -20,8 +20,6 @@ import numpy as np
 class Action(object):
     def __init__(self):
         pass
-    def __str__(self):
-        return type(self).__name__
 
 class GripperAction(Action):
     def __init__(self, openArg, gripper):
@@ -33,37 +31,6 @@ class GripperAction(Action):
             self.gripper.open()
         else:
             self.gripper.close()
-
-    def __getstate__(self):
-        odict = self.__dict__.copy()
-        del odict['gripper']
-        return odict
-
-    def __setstate__(self, dict):
-        self.__dict__.update(dict)
-        self.gripper = None
-
-class TuckAction(Action):
-    def __init__(self, arm):
-        self.arm = arm
-    def execute(self):
-        js = ArmJoints()
-        js.set_shoulder_pan(1.32)
-        js.set_shoulder_lift(1.4)
-        js.set_upperarm_roll(-0.2)
-        js.set_elbow_flex(1.72)
-        js.set_forearm_roll(0)
-        js.set_wrist_flex(1.66)
-        js.set_wrist_roll(0)
-        self.arm.move_to_joints(js)
-    # really does nothing
-    def __getstate__(self):
-        odict = self.__dict__.copy()
-        del odict['arm']
-        return odict
-    def __setstate__(self, dict):
-        self.__dict__.update(dict)
-        self.arm = None
 
 class MoveAction(Action):
     def __init__(self, absArg, pose, arm, tagId=None, former_tag_pose=None):
@@ -78,23 +45,12 @@ class MoveAction(Action):
 
         self.arm = arm
 
-    def __getstate__(self):
-        odict = self.__dict__.copy()
-        del odict['arm']
-        return odict
-
-    def __setstate__(self, dict):
-        self.__dict__.update(dict)
-        self.arm = None
-
-    def execute(self, tagID=None):
-        if tagID is not None:
-            self.tagID = tagID
+    def execute(self):
         move_to_pose = PoseStamped()
         move_to_pose.header.frame_id = 'base_link'
 
         if self.absolute:
-            #print(self.pose.pose.position)
+            print(self.pose.pose.position)
             move_to_pose.pose.position = Point()
             move_to_pose.pose.position.x = self.pose.pose.position[0]
             move_to_pose.pose.position.y = self.pose.pose.position[1]
@@ -109,7 +65,7 @@ class MoveAction(Action):
             # move_to_pose.pose.position.x -= .166
 
             # print(move_to_pose)
-            #print(move_to_pose)
+            print(move_to_pose)
             self.arm.move_to_pose(move_to_pose)
         else:
             # needed_marker = get_live_marker(self.tagId)
@@ -146,10 +102,10 @@ class MoveAction(Action):
             # self.arm.move_to_pose(new_pose)
             #
             # return
-            #print('tag pose')
-            #print(self.former_tag_pose)
-            #print('former pose')
-            #print(self.pose)
+            print('tag pose')
+            print(self.former_tag_pose)
+            print('former pose')
+            print(self.pose)
 
             # NOTE: Find the tag marker in base link for the new pose
             needed_marker = get_live_marker(self.tagId)
@@ -198,8 +154,8 @@ class MoveAction(Action):
             new_pose = PoseStamped()
             new_pose.header.frame_id = 'base_link'
 
-            #print(trans2)
-            #print(rot2)
+            print(trans2)
+            print(rot2)
 
             new_pose.pose.position = Point()
             new_pose.pose.orientation = Quaternion()
@@ -216,7 +172,7 @@ class MoveAction(Action):
             # print(new_pose)
 
             # NOTE: Move the arm
-            #print(new_pose)
+            print(new_pose)
             # new_pose.pose.position.x -= .166
             # new_pose.pose.position.y -= .024
             self.arm.move_to_pose(new_pose)
@@ -236,13 +192,10 @@ class DemonstrationProgram(object):
     def add_action(self, action):
         self.actions.append(action)
 
-    def execute(self, fiducial=None):
+    def execute(self):
         for action in self.actions:
-            print('Executing:', type(action).__name__)
-            if (type(action).__name__ == 'MoveAction'):
-                action.execute(fiducial)
-            else:
-                action.execute()
+            print('Executing:', action)
+            action.execute()
             rospy.sleep(1)
 
 class ArTagReader(object):
@@ -282,21 +235,24 @@ def get_live_markers():
     ar_subscriber = rospy.Subscriber('/ar_pose_marker', ar_track_alvar_msgs.msg.AlvarMarkers, callback=reader.callback)
     while len(reader.markers) == 0:
         print('trying to find tag')
+        # print("lol")
         rospy.sleep(0.1)
 
     # print(reader.markers)
 
     return copy.deepcopy(reader.markers)
 
-def create_new_program(gripper, arm):
+def create_new_program():
     new_program = DemonstrationProgram()
     print('\t add [abs] [tag] | to add a new pose relative to the abs, tag optional')
 
     print('\t open | to add an open gripper action')
     print('\t close | to add a close gripper action')
-    print('\t tuck | tuck the arm')
+
     print('\t list | list all actions saved so far')
+
     print('\t tags | list all tags')
+
     print('\t done | yay done')
     print('')
 
@@ -311,15 +267,11 @@ def create_new_program(gripper, arm):
     # _controller_client.wait_for_result()
     # !
 
+    gripper = Gripper()
+    arm = Arm()
+
     while True:
-        user_input = ""
-        try:
-            print("please enter a command")
-            user_input = raw_input()
-        except EOFError:
-            print("empty?", user_input)
-            continue
-        print("you typed", user_input)
+        user_input = raw_input()
         if user_input.split()[0] == 'add':
             # TODO(emersonn): Needs arm pose
             arm_pose = PoseStamped()
@@ -379,9 +331,6 @@ def create_new_program(gripper, arm):
         elif user_input == 'close':
             new_program.add_action(GripperAction(False, gripper))
             print('>> Added close action')
-        elif user_input == 'tuck':
-            new_program.add_action(TuckAction(arm))
-            print('>> Added tuck action')
         elif user_input == 'list':
             for action in new_program.actions:
                 print(action)
@@ -395,117 +344,60 @@ def create_new_program(gripper, arm):
 
 def print_main_actions():
     print('\t program [name] | to make a new program')
-    print('\t execute [name] [tagid] | to execute a new program (tagid optional)')
+    print('\t execute [name] | to execute a new program')
 
     print('\t list | to list all programs')
     print('\t exit | to exit out of this joint')
     print('')
 
-class ProgramHandler(object):
-    def __init__(self, load_file):
-        print("Initializing the gripper and arm...")
-        print("To quit before gripper/arm are initialized, do ctrl-C and then ctrl-D.")
-        gripper = Gripper()
-        print("Gripper ready...")
-        arm = Arm()
-        print("Arm ready...")
-        self.program_info = load_program(load_file, gripper, arm)
-
-    def get_program(self, program_name):
-        return self.program_info[program_name]
-
-def load_program(name, gripper, arm):
-    programs = {}
-    try:
-        with open(name, "r") as f:
-            programs = pickle.load(f)
-            for key, program in programs.items():
-                for action in program.actions:
-                    if type(action).__name__ == 'GripperAction':
-                        action.gripper = gripper
-                    elif type(action).__name__ == 'MoveAction' or type(action).__name__ == 'TuckAction':
-                        action.arm = arm
-    except IOError:
-        print("error while loading")
-    return programs
-
 def main():
     rospy.init_node('demonstration_program')
     wait_for_time()
 
-    print("Initializing the gripper and arm...")
-    print("To quit before gripper/arm are initialized, do ctrl-C and then ctrl-D.")
-    gripper = Gripper()
-    print("Gripper ready...")
-    arm = Arm()
-    print("Arm ready...")
-
     # TODO(emersonn): This is where we start the interface
     print('Welcome to the best demonstration program in North America')
 
-    FILENAME = "/home/team3/catkin_ws/src/cse481c/acciobot_main/demonstration.pickle"
-    programs = load_program(FILENAME, gripper, arm)
-
-    # For persisting the file to disk
-    def pickle_it_up():
-        with open(FILENAME, "w") as f:
-            pickle.dump(programs, f)
-    rospy.on_shutdown(pickle_it_up)
-
+    programs = {}
 
     while True:
-        print_main_actions()
-        user_input = raw_input()
-        if len(user_input.split()) < 1:
-            continue
+        try:
+            print_main_actions()
 
-        parts = user_input.split()
-        command = parts[0]
-        if len(parts) < 2 and (command == 'program' or command == 'execute'):
-            print("you didn't specify a program name")
-            continue
+            user_input = raw_input()
+            if len(user_input.split()) < 1:
+                continue
 
-        if (command == 'program'):
-            program_name = parts[1]
-            if program_name in programs:
-                print("that program already exists, are you sure? (y/n)")
-                yes = raw_input()
-                if not yes.startswith('y') and not yes.startswith('Y'):
-                    continue
-            new_program = create_new_program(gripper, arm)
-            programs[program_name] = new_program
-        elif (command == 'execute'):
-            # print('1')
-            # _controller_client = actionlib.SimpleActionClient('query_controller_states', robot_controllers_msgs.msg.QueryControllerStatesAction)
-            # goal = robot_controllers_msgs.msg.QueryControllerStatesGoal()
-            # state = robot_controllers_msgs.msg.ControllerState()
-            # state.name = 'arm_controller/follow_joint_trajectory'
-            # state.state = robot_controllers_msgs.msg.ControllerState.RUNNING
-            # goal.updates.append(state)
-            # print('2')
-            # _controller_client.send_goal(goal)
-            # print('3')
-            # _controller_client.wait_for_result()
+            if (user_input.split()[0] == 'program'):
+                new_program = create_new_program()
+                programs[user_input.split()[1]] = new_program
+            elif (user_input.split()[0] == 'execute'):
+                # print('1')
+                # _controller_client = actionlib.SimpleActionClient('query_controller_states', robot_controllers_msgs.msg.QueryControllerStatesAction)
+                # goal = robot_controllers_msgs.msg.QueryControllerStatesGoal()
+                # state = robot_controllers_msgs.msg.ControllerState()
+                # state.name = 'arm_controller/follow_joint_trajectory'
+                # state.state = robot_controllers_msgs.msg.ControllerState.RUNNING
+                # goal.updates.append(state)
+                # print('2')
+                # _controller_client.send_goal(goal)
+                # print('3')
+                # _controller_client.wait_for_result()
 
-            # if user_input.split()[1] not in programs:
-            #     print('lol')
-            #     continue
-            program_name = parts[1]
-            fid = None
-            if (len(parts) > 2):
-                fid = int(parts[2])
-                # TODO error checking or something
-            if program_name in programs:
-                programs[program_name].execute(fid)
+                # if user_input.split()[1] not in programs:
+                #     print('lol')
+                #     continue
+                print('?????')
+                programs[user_input.split()[1]].execute()
+            elif (user_input == 'list'):
+                print(', '.join(programs))
+                print('')
+            elif (user_input == 'exit'):
+                break
             else:
-                print('you typed the program name wrong lol')
-        elif (command == 'list'):
-            print(', '.join(programs))
-            print('')
-        elif (command == 'exit'):
-            break
-        else:
-            print('try again dude')
+                print('try again dude')
+        except:
+            print('DUDE')
+            continue
 
 if __name__ == '__main__':
     main()

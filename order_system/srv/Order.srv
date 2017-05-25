@@ -1,8 +1,10 @@
 string ORDER=order
 string CANCEL=cancel
+#string STATUS=status
 
 string command
-acciobot_main/Item[] items
+string[] names
+int[] quantity
 ---
-int64 id
+int id
 

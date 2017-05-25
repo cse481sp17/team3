@@ -13,7 +13,7 @@ import acciobot_main.msg
 
 class OrderHandler(object):
     def __init__(self, station_handler, program_handler):
-        self.order_queue = Queue()
+        self.order_queue = [] # LOL it's not a queue
         self.station_handler = station_handler
         self.program_handler = program_handler
 
@@ -24,7 +24,7 @@ class OrderHandler(object):
         available_stations = self.station_handler.get_station_ids()
         available_stations.remove(0) # cashier is at 0
         for num in available_stations:
-            self.order_queue.put(self.make_fake_order_single_item(num))
+            self.order_queue.append(self.make_fake_order_single_item(num))
 
     def make_fake_order_single_item(self, station_number):
         fake_station = self.station_handler.get_station(station_number)
@@ -41,6 +41,14 @@ class OrderHandler(object):
 
         fake_order = Order([fake_item])
         return fake_order
+
+    def remove_order(self, order_id):
+        for (i, order in enumerate(self.order_queue)):
+            if order.order_id == order_id:
+                left_half = self.order_queue[0:i]
+                right_half = self.order_queue[i + 1:len(self.order_queue)]
+                self.order_queue = left_half + right_half
+                return order
 
     # should be called before we put an order on the queue
     # sort items by station id
