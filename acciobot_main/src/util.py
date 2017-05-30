@@ -58,7 +58,8 @@ class Item(object):
         print("Yo, we're sending a message to the segmentation pipeline")
         print("Waiting for message LOL")
 
-        rospy.wait_for_message("accio_collisions", acciobot_main.msg.CollisionList)
+        # rospy.wait_for_message("accio_collisions", acciobot_main.msg.CollisionList)
+        found_items = rospy.wait_for_message("accio_items", acciobot_main.msg.PerceivedItems)
         print("Got message, continuing...")
 
         # TODO(emersonn): For later: make message of segmented items, and wait for message

@@ -144,7 +144,7 @@ class MoveAction(Action):
         self.__dict__.update(dict)
         self.arm = None
 
-    def execute(self, tagID=None):
+    def execute(self, tagID=None, desired_pose=None):
         if tagID is not None:
             self.tagId = tagID
         move_to_pose = PoseStamped()
@@ -306,12 +306,12 @@ class DemonstrationProgram(object):
     def add_action(self, action):
         self.actions.append(action)
 
-    def execute(self, fiducial=None):
+    def execute(self, fiducial=None, desired_pose=None):
         for action in self.actions:
             print('Executing:', type(action).__name__)
             worked = False
             if (type(action).__name__ == 'MoveAction'):
-                worked = action.execute(fiducial)
+                worked = action.execute(fiducial if fiducial is not None else desired_pose)
             else:
                 worked = action.execute()
             if not worked:

@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   std_msgs
   geometry_msgs
+  visualization_msgs
   message_generation
 )
 
@@ -59,6 +60,7 @@ add_message_files(
   Order.msg
   CollisionList.msg
   BoxCollision.msg
+  PerceivedItems.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -80,6 +82,7 @@ generate_messages(
   sensor_msgs
   std_msgs
   geometry_msgs
+  visualization_msgs
 )
 
 ################################################
