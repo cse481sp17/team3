@@ -14,3 +14,6 @@ class ProgramHandler(object):
 
 	def get_program(self, program_name):
 		return self.program_info[program_name]
+
+	def get_drop(self):
+		return self.program_info["dropoffnew"]

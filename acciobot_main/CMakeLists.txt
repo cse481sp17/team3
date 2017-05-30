@@ -57,6 +57,8 @@ add_message_files(
   StationList.msg
   Station.msg
   Order.msg
+  CollisionList.msg
+  BoxCollision.msg
 )
 
 ## Generate services in the 'srv' folder

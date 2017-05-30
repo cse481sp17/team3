@@ -22,14 +22,37 @@ def create_default_items():
 	stock.header.stamp = rospy.Time.now()
 
 	first_item = acciobot_main.msg.Item()
-	first_item.item_name = "Box of Love"
-	first_item.item_id = 42
-	first_item.item_type = "box"
-	first_item.quantity = 3
-	first_item.feducial_id = 10
+	first_item.item_name = "Cheezits"
+	first_item.item_id = 1
+	first_item.item_type = "cheezitNEWESTNEW"
+	first_item.quantity = 4
+	first_item.feducial_id = 14
 
+	second_item = acciobot_main.msg.Item()
+	second_item.item_name = "Pasta"
+	second_item.item_id = 2
+	second_item.item_type = "box"
+	second_item.quantity = 6
+	second_item.feducial_id = 11
+
+	third_item = acciobot_main.msg.Item()
+	third_item.item_name = "Hairdye"
+	third_item.item_id = 3
+	third_item.item_type = "hairnewaction"
+	third_item.quantity = 1
+	third_item.feducial_id = 0
+
+	fourth_item = acciobot_main.msg.Item()
+	fourth_item.item_name = "Cereal"
+	fourth_item.item_id = 4
+	fourth_item.item_type = "box"
+	fourth_item.quantity = 3
+	fourth_item.feducial_id = 15
+	
 	stock.items.append(first_item)
-
+	stock.items.append(second_item)
+	stock.items.append(third_item)
+	stock.items.append(fourth_item)
 	return stock
 
 class ItemStockWrapper(object):
@@ -55,6 +78,7 @@ def main():
 		with open(ITEM_FILE, 'r') as f:
 			items = pickle.load(f)
 	else:
+		print("ih")
 		items = create_default_items()
 
 	stock_wrapper = ItemStockWrapper(items)

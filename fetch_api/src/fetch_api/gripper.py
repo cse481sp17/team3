@@ -27,6 +27,7 @@ class Gripper(object):
         goal.command.max_effort = self.MAX_EFFORT
         self.client.send_goal(goal)
         self.client.wait_for_result()
+        return True # todo figure out how to know if it didn't work
 
     def close(self, max_effort=MAX_EFFORT):
         """Closes the gripper.
@@ -40,3 +41,4 @@ class Gripper(object):
         goal.command.max_effort = max_effort
         self.client.send_goal(goal)
         self.client.wait_for_result()
+        return True # todo figure out how to know if it didn't work

@@ -5,6 +5,7 @@ import robot_controllers_msgs.msg
 # from robot_controllers_msgs import ControllerState
 import pickle
 import ar_track_alvar_msgs.msg
+from visualization_msgs.msg import Marker
 
 import tf
 
@@ -16,6 +17,62 @@ import copy
 import actionlib
 
 import numpy as np
+
+GRIPPER_MESH = 'package://fetch_description/meshes/gripper_link.dae'
+L_FINGER_MESH = 'package://fetch_description/meshes/l_gripper_finger_link.STL'
+R_FINGER_MESH = 'package://fetch_description/meshes/r_gripper_finger_link.STL'
+
+def createMarkers(ps):
+    name1 = "left"
+    marker1 = Marker()
+    # marker1.header.frame_id = "base_link"
+    marker1.type = Marker.MESH_RESOURCE
+    marker1.mesh_resource = L_FINGER_MESH
+    marker1.pose = copy.deepcopy(ps.pose)
+    marker1.pose.position.x += 0.166
+    marker1.pose.position.y -= 0.05
+    # marker1.pose.orientation.w = 1
+    marker1.scale.x = 1
+    marker1.scale.y = 1
+    marker1.scale.z = 1
+    marker1.color.r = 0.0
+    marker1.color.g = 0.5
+    marker1.color.b = 0.5
+    marker1.color.a = 1.0
+    #marker1.markers.append(create_box_marker())
+
+    name2 = "right"
+    marker2 = Marker()
+    # marker2.header.frame_id = "base_link"
+    marker2.type = Marker.MESH_RESOURCE
+    marker2.mesh_resource = R_FINGER_MESH
+    marker2.pose = copy.deepcopy(ps.pose)
+    marker2.pose.position.x += 0.166
+    marker2.pose.position.y += 0.05
+    # marker2.pose.orientation.w = 1
+    marker2.scale.x = 1
+    marker2.scale.y = 1
+    marker2.scale.z = 1
+    marker2.color.r = 0.0
+    marker2.color.g = 0.5
+    marker2.color.b = 0.5
+    marker2.color.a = 1.0
+
+    name3 = "gripperer"
+    marker3 = Marker()
+    # marker3.header.frame_id = "base_link"
+    marker3.type = Marker.MESH_RESOURCE
+    marker3.mesh_resource = GRIPPER_MESH
+    marker3.pose = copy.deepcopy(ps.pose)
+    # marker3.pose.position.x += 0.166
+    marker3.scale.x = 1
+    marker3.scale.y = 1
+    marker3.scale.z = 1
+    marker3.color.r = 0.0
+    marker3.color.g = 0.5
+    marker3.color.b = 0.5
+    marker3.color.a = 1.0
+    return [marker1, marker2, marker3]
 
 class Action(object):
     def __init__(self):
@@ -30,9 +87,9 @@ class GripperAction(Action):
 
     def execute(self):
         if self.open:
-            self.gripper.open()
+            return self.gripper.open()
         else:
-            self.gripper.close()
+            return self.gripper.close()
 
     def __getstate__(self):
         odict = self.__dict__.copy()
@@ -55,7 +112,7 @@ class TuckAction(Action):
         js.set_forearm_roll(0)
         js.set_wrist_flex(1.66)
         js.set_wrist_roll(0)
-        self.arm.move_to_joints(js)
+        return self.arm.move_to_joints(js)
     # really does nothing
     def __getstate__(self):
         odict = self.__dict__.copy()
@@ -89,10 +146,10 @@ class MoveAction(Action):
 
     def execute(self, tagID=None):
         if tagID is not None:
-            self.tagID = tagID
+            self.tagId = tagID
         move_to_pose = PoseStamped()
         move_to_pose.header.frame_id = 'base_link'
-
+        moved = True
         if self.absolute:
             #print(self.pose.pose.position)
             move_to_pose.pose.position = Point()
@@ -110,7 +167,9 @@ class MoveAction(Action):
 
             # print(move_to_pose)
             #print(move_to_pose)
-            self.arm.move_to_pose(move_to_pose)
+            result = self.arm.move_to_pose(move_to_pose)
+            if result is not None:
+                moved = False
         else:
             # needed_marker = get_live_marker(self.tagId)
             #
@@ -154,6 +213,8 @@ class MoveAction(Action):
             # NOTE: Find the tag marker in base link for the new pose
             needed_marker = get_live_marker(self.tagId)
             assert needed_marker
+
+            #print("Goal pose:", needed_marker.pose.pose)
 
             # NOTE: Find the translation between the old wrist and new wrist offset
             new_pose = None
@@ -219,7 +280,16 @@ class MoveAction(Action):
             #print(new_pose)
             # new_pose.pose.position.x -= .166
             # new_pose.pose.position.y -= .024
-            self.arm.move_to_pose(new_pose)
+
+            marker_pub = rospy.Publisher('visualization_marker/', Marker, queue_size=5)
+            for marker in createMarkers(new_pose):
+                marker.header.frame_id = "base_link"
+                marker_pub.publish(marker)
+
+            result = self.arm.move_to_pose(new_pose)
+            if result is not None:
+                moved = False
+        return moved
 
 def pose_to_full_matrix(pose):
     trans_mat = tf.transformations.translation_matrix(pose.position)
@@ -239,11 +309,16 @@ class DemonstrationProgram(object):
     def execute(self, fiducial=None):
         for action in self.actions:
             print('Executing:', type(action).__name__)
+            worked = False
             if (type(action).__name__ == 'MoveAction'):
-                action.execute(fiducial)
+                worked = action.execute(fiducial)
             else:
-                action.execute()
+                worked = action.execute()
+            if not worked:
+                print("The action ", type(action).__name__, "failed")
+                return False
             rospy.sleep(1)
+        return True
 
 class ArTagReader(object):
     def __init__(self):
@@ -259,8 +334,8 @@ def wait_for_time():
 def get_live_marker(tag_id):
     reader = ArTagReader()
     ar_subscriber = rospy.Subscriber('/ar_pose_marker', ar_track_alvar_msgs.msg.AlvarMarkers, callback=reader.callback)
-    while len(reader.markers) == 0 and not is_in_marker(reader.markers, tag_id):
-        print('trying to find tag')
+    while len(reader.markers) == 0 or not is_in_marker(reader.markers, tag_id):
+        #print('Trying to find tag:', reader.markers)
         rospy.sleep(0.1)
 
     needed_marker = None
@@ -299,6 +374,17 @@ def create_new_program(gripper, arm):
     print('\t tags | list all tags')
     print('\t done | yay done')
     print('')
+
+    # 5. TODO(emersonn): Make a marker for poses
+    # // TODO(emersonn): Make it so if moveit doesn't find anything we extend, and also we need to extend moveit
+    # // 1. TODO(emersonn): Reuse point cloud, save AR Marker found right in the beginning of execution
+    # // TODO(emersonn): When it finishes, all goals should be meh to Fetch robot
+    # // 1. TODO(emersonn): Need to make pipeline run only when given message wait for message
+    # 2. TODO(emersonn): Add the cylinders to the planning scene
+    # 3. TODO: Add the basket to the planning scene
+    # 4. TODO: Add picked up item as a collision object
+    # TODO: Move arm back to handy position before segmenting again
+    # Max cluster size needs to be changed to like 30,000
 
     # !
     # _controller_client = actionlib.SimpleActionClient('query_controller_states', robot_controllers_msgs.msg.QueryControllerStatesAction)
@@ -413,6 +499,8 @@ class ProgramHandler(object):
 
     def get_program(self, program_name):
         return self.program_info[program_name]
+    def get_drop(self):
+        return self.program_info["dropoffnew"]
 
 def load_program(name, gripper, arm):
     programs = {}
@@ -450,8 +538,12 @@ def main():
     def pickle_it_up():
         with open(FILENAME, "w") as f:
             pickle.dump(programs, f)
-    rospy.on_shutdown(pickle_it_up)
 
+    def stop_things():
+        pickle_it_up()
+        arm.cancel_all_goals()
+
+    rospy.on_shutdown(stop_things)
 
     while True:
         print_main_actions()
@@ -496,7 +588,9 @@ def main():
                 fid = int(parts[2])
                 # TODO error checking or something
             if program_name in programs:
-                programs[program_name].execute(fid)
+                result = programs[program_name].execute(fid)
+                if not result:
+                    print("program", program_name, "failed")
             else:
                 print('you typed the program name wrong lol')
         elif (command == 'list'):

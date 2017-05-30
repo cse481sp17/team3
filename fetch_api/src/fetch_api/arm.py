@@ -85,6 +85,7 @@ class Arm(object):
 
     	self.client.send_goal(goal)
     	self.client.wait_for_result()
+        return True # todo don't assumethis worked
 
     def check_pose(self,
                pose_stamped,

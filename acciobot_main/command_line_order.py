@@ -9,15 +9,21 @@ import acciobot_main.msg
 class Stock():
 	def __init__(self):
 		self.stock = {}
+		self.length = 0
 
 	def _callback(self, response):
+		self.length = 0
 		for item in response.items:
 			self.stock[item.item_id] = item
+			if len(item.item_name) > self.length: 
+				self.length = len(item.item_name)
 	def _printStock(self):
 		print "Items available for purchase:"
-		print "ID\tItem\t\tAmount"
+		pad = " " * (self.length - 4)
+		print "ID\tItem"+pad+"\tAmount"
 		for item in self.stock.keys():
-			print item,"\t",self.stock[item].item_name,"\t",self.stock[item].quantity
+			padding = " " * (self.length - len(self.stock[item].item_name))
+			print item,"\t",self.stock[item].item_name+padding,"\t",self.stock[item].quantity
 	def _getItemName(self, itemId):
 		return self.stock[itemId].item_name
 	def _getItem(self, itemId):
@@ -25,6 +31,8 @@ class Stock():
 			return self.stock[itemId]
 		else:
 			return None
+	def _getLength(self):
+		return self.length
 
 class Cart():
 
@@ -47,9 +55,11 @@ class Cart():
 
 	def _printContents(self,stock):
 		print "Items in cart:"
+		pad = " " * (stock._getLength() - 4)
 		print "ID\tItem\t\tAmount"
 		for x in self.cart.keys():
-			print x,"\t",stock._getItemName(int(x)),"\t",self.cart[x]
+			padding = " " * (stock._getLength() - len(stock._getItemName(int(x))))
+			print x,"\t",stock._getItemName(int(x)) + padding,"\t",self.cart[x]
 		print
 
 	def _contents(self, stock):
@@ -58,6 +68,7 @@ class Cart():
 			it = stock._getItem(x)
 			it.quantity = self.cart[x]
 			items += [it]
+		print items
 		return items
 
 
@@ -68,7 +79,7 @@ def print_intro():
 	print ("   add <id> <count>: Add <count> number of <name> items to order.")
 	print ("   del <id>: Remove <id> items from order.")
 	print ("   done: Complete order and submit.")
-	print ("   status <id>: Display status of order number <id>.")
+	print ("   cancel <id>: Cancel order number <id>.")
 	print ("   help: Show this list of commands")
 	print ("   quit: Exit program.")
 
@@ -96,6 +107,8 @@ def get_info(cart, stock):
 				cart._add(name, count, stock)
 			elif answer == "del":
 				cart._del(name)
+			elif answer == "cancel":
+				print "Unimplemented: trying to cancel order",name
 		except:
 			print "unknown command"
 	return False
@@ -106,7 +119,7 @@ def main():
 	send_order = rospy.ServiceProxy('acciobot_main/handle_order', HandleOrder)
 	stock = Stock()
 	rospy.Subscriber('available_items', acciobot_main.msg.ItemStock, stock._callback)
-	order_pub = rospy.Publisher('update_items', acciobot_main.msg.ItemStock, queue_size=10)
+	order_pub = rospy.Publisher('update_items', acciobot_main.msg.ItemStock, latch=True, queue_size=10)
 
 	while True:
 		print_intro()
