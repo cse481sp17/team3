@@ -440,6 +440,9 @@ class MoveAction(Action):
             # print('New marker:', new_marker)
             marker_pub_WTFLOL.publish(new_marker)
 
+            # TODO(emersonn): THIS IS WHERE THINGS GO
+            raw_input()
+
             # print('Trying to move to pose:', new_pose)
 
             result = self.arm.move_to_pose(new_pose)
@@ -694,7 +697,7 @@ class ProgramHandler(object):
 
     def get_shelf(self, shelf):
         if shelf == 2:
-            return self.get_program("b4secondshelf") #b4secondshelf
+            return self.get_program("b4secondshelffar") #b4secondshelf TODO(emersonn): NEED TO MOVE TORSO IN NEW
         if shelf == 3:
             return self.get_program("b4thirdshelf") #b4thirdshelf
         print("you did something wrong to get program")

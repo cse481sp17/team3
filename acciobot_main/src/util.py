@@ -15,6 +15,8 @@ import std_msgs.msg
 import acciobot_main.msg
 import std_msgs.msg
 
+from geometry_msgs.msg import Pose, PoseStamped
+
 clear_pub = rospy.Publisher('accio_clear_collisions', std_msgs.msg.Bool, queue_size=5)
 
 HARDCODED_LOL_HEIGHTS = {
@@ -30,6 +32,48 @@ HARDCODED_LOL_WIDTH = {
 3: 0.07,
 4: 0.20
 }
+
+def transform_to_pose(matrix):
+    pose = Pose()
+    pose.position.x = matrix[0, 3]
+    pose.position.y = matrix[1, 3]
+    pose.position.z = matrix[2, 3]
+    x, y, z, w = tft.quaternion_from_matrix(matrix)
+    pose.orientation.x = x
+    pose.orientation.y = y
+    pose.orientation.z = z
+    pose.orientation.w = w
+    return pose
+
+
+def pose_to_transform(pose):
+    q = pose.orientation
+    matrix = tft.quaternion_matrix([q.x, q.y, q.z, q.w])
+    matrix[0, 3] = pose.position.x
+    matrix[1, 3] = pose.position.y
+    matrix[2, 3] = pose.position.z
+    return matrix
+
+def transform_by_part(obj_pose_in_base, x, y, z):
+    obj_mat_in_base = pose_to_transform(obj_pose_in_base)
+
+    pregrasp_pose_in_obj = Pose()
+    pregrasp_pose_in_obj.position.x = x
+    pregrasp_pose_in_obj.position.y = y
+    pregrasp_pose_in_obj.position.z = z
+
+    pregrasp_pose_in_obj.orientation.w = 1
+
+    pregrasp_mat_in_obj = pose_to_transform(pregrasp_pose_in_obj)
+
+    pregrasp_mat_in_base = np.dot(obj_mat_in_base, pregrasp_mat_in_obj)
+    pregrasp_pose = transform_to_pose(pregrasp_mat_in_base)
+
+    ps1 = Pose()
+    # ps1.header.frame_id = 'base_link'
+    ps1 = copy.deepcopy(pregrasp_pose)
+
+    return ps1
 
 class Order(object):
     def __init__(self, items, order_msg, status_pub):
@@ -93,7 +137,9 @@ class Item(object):
         self.station.attract_fetch()
 
     def locate_item(self):
-        self.shelf_program.execute()
+        # TODO(emersonn): UNCOMMENT THIS AS NECESSARY
+        print('UNCOMMEN THIS')
+        # self.shelf_program.execute()
         # TODO(emersonn): Read from arguments instead, this is HARDCODED!
         new_point_cloud = rospy.wait_for_message("cloud_in", PointCloud2)
         #new_point_cloud = rospy.wait_for_message("/head_camera/depth_registered/points", PointCloud2)
@@ -107,6 +153,9 @@ class Item(object):
         found_items = rospy.wait_for_message("accio_items", acciobot_main.msg.PerceivedItems)
         print("Got message, continuing...")
 
+        print("OUR MESSAGE IS AS FOLLOWS:", found_items)
+        print("MESSAGE")
+
         # TODO(emersonn): THIS IS HARDCODED, WE NEED TO ACTUALLY FIND THE ITEM BY TSORING IT IN THE INFO BY ITS SHELF
         # TODO(emersonn): MAKE SURE THE STATION ACTUALLY HAS THE ITEMS LIST FOR SHELVES
         # // TODO(emersonn): We're assuming the desired_pose has an actual item
@@ -119,11 +168,16 @@ class Item(object):
         item_height = HARDCODED_LOL_HEIGHTS[self.item.item_id]
         # if len(found_items.tables[self.shelf].markers) > 0:
         #     desired_pose = found_items.tables[self.shelf].markers[0].pose
+        if len(found_items.tables[self.shelf].markers) == 0:
+            print('Found no items RECURSION IS AWESOME!')
+            return self.locate_item()
+
         for mark in found_items.tables[self.shelf].markers:
             # print('Marker', mark)
-            sqrd_wid = (mark.scale.y - item_width) ** 2
+            sqrd_wid = (mark.scale.x - item_width) ** 2
             sqrd_heit = (mark.scale.z - item_height) ** 2
             fork_spoons = math.sqrt(sqrd_wid + sqrd_heit)
+            print('CURR SCALE:', mark.scale)
 
             if min_distance is None or fork_spoons < min_distance:
                 min_distance = fork_spoons
@@ -131,6 +185,7 @@ class Item(object):
 
 
         print('FOUND MIN DISTANCE', min_distance, 'with desired pose', min_item.pose)
+        print('SCALE:', min_item.scale)
         desired_pose = min_item.pose
 
         if self.item.item_id == 3:
@@ -146,6 +201,9 @@ class Item(object):
 
             # desired_pose = self.transform_from_marker(desired_pose, - min_item.scale.x / 2, 0, min_item.scale.z / 2 - 0.03)
             pass
+        if self.item.item_id == 2:
+            print('Pasta transform')
+            desired_pose = transform_by_part(desired_pose, 0, .02, min_item.scale.z / 2 + 0.02)
 
         if desired_pose is None:
             # TODO ITEM NOT FOUND. Tell store worker.
@@ -201,7 +259,7 @@ class Item(object):
             clear_pub.publish(new_msg)
             self.drop.execute()
             self.raisez.execute()
-            self.tuck.execute()
+            # self.tuck.execute()
             self.goforward.execute()
 
         return done
