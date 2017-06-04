@@ -5,11 +5,11 @@ import robot_controllers_msgs.msg
 # from robot_controllers_msgs import ControllerState
 import pickle
 import ar_track_alvar_msgs.msg
-from visualization_msgs.msg import Marker
+from visualization_msgs.msg import Marker, MarkerArray
 
 import tf
 
-from fetch_api import Arm, Gripper, ArmJoints
+from fetch_api import Arm, Gripper, ArmJoints, Torso, Head, Base
 
 import rospy
 
@@ -18,9 +18,57 @@ import actionlib
 
 import numpy as np
 
+marker_pub_WTFLOL = rospy.Publisher('/wtf_is_this', Marker, queue_size=5)
+
 GRIPPER_MESH = 'package://fetch_description/meshes/gripper_link.dae'
 L_FINGER_MESH = 'package://fetch_description/meshes/l_gripper_finger_link.STL'
 R_FINGER_MESH = 'package://fetch_description/meshes/r_gripper_finger_link.STL'
+
+def transform_from_marker(ps, x, y, z):
+    p = copy.deepcopy(ps)
+    ps1 = copy.deepcopy(ps)
+    print(p)
+    orientation_arr = np.array([p.pose.orientation.x, p.pose.orientation.y, p.pose.orientation.z, p.pose.orientation.w])
+    quat_matrix = tft.quaternion_matrix(orientation_arr)
+    print(quat_matrix)
+    quat_matrix[0][3] = p.pose.position.x
+    quat_matrix[1][3] = p.pose.position.y
+    quat_matrix[2][3] = p.pose.position.z
+
+    print(quat_matrix)
+    objTpg = np.matrix('1 0 0 ' + str(x) + '; 0 1 0 ' + str(y) + '; 0 0 1 ' + str(z) + '; 0 0 0 1')
+    blTpg = np.dot(quat_matrix, objTpg)
+    print(blTpg)
+
+    print(blTpg.shape)
+    ps1.pose.position.x = blTpg[0, 3]
+    ps1.pose.position.y = blTpg[1, 3]
+    ps1.pose.position.z = blTpg[2, 3]
+
+    return ps1
+
+def createMarkerLOL(ps, num):
+    marker1 = Marker()
+
+    marker1.header.frame_id = "base_link"
+    marker1.ns = "demo_program"
+    marker1.id = num
+    marker1.type = Marker.CUBE
+
+    marker1.pose = copy.deepcopy(ps.pose)
+    # marker1.pose.position.x = 1
+    # marker1.pose.position.y = 1
+    # marker1.pose.position.z = 1
+
+    marker1.scale.x = 0.05
+    marker1.scale.y = 0.05
+    marker1.scale.z = 0.05
+    marker1.color.r = 0.0
+    marker1.color.g = 0.5
+    marker1.color.b = 0.5
+    marker1.color.a = 1.0
+
+    return marker1
 
 def createMarkers(ps):
     name1 = "left"
@@ -80,16 +128,85 @@ class Action(object):
     def __str__(self):
         return type(self).__name__
 
+class HeadAction(Action):
+    # Maybe we should pass in explicit args instead
+    #   of "args" but it becomes a lot...
+    #  format of args is one of following:
+    #   look_at [FRAME_ID] [X] [Y] [Z]
+    #   pan_tilt [PAN_ANG] [TILT_ANG]
+    def __init__(self, args, head):
+        self.head = head
+        self.args = args
+
+    def execute(self):
+        command = self.args[0]
+        if command == 'look_at':
+            frame_id, x, y, z = self.args[1], float(self.args[2]), float(self.args[3]), float(self.args[4])
+            self.head.look_at(frame_id, x, y, z)
+        elif command == 'pan_tilt':
+            pan, tilt = float(self.args[1]), float(self.args[2])
+            self.head.pan_tilt(pan, tilt)
+        return True
+
+    def __getstate__(self):
+        odict = self.__dict__.copy()
+        del odict['head']
+        return odict
+
+    def __setstate__(self, dict):
+        self.__dict__.update(dict)
+        self.torso = None
+
+class TorsoAction(Action):
+    def __init__(self, height, torso):
+        self.height = height
+        self.torso = torso
+
+    def execute(self):
+        self.torso.set_height(self.height)
+        return True
+
+    def __getstate__(self):
+        odict = self.__dict__.copy()
+        del odict['torso']
+        return odict
+
+    def __setstate__(self, dict):
+        self.__dict__.update(dict)
+        self.torso = None
+
+class BaseAction(Action):
+    def __init__(self, base, distance):
+        self.distance = distance
+        self.base = base
+
+    def execute(self):
+        self.base.go_forward(self.distance)
+        return True
+
+    def __getstate__(self):
+        odict = self.__dict__.copy()
+        del odict['base']
+        return odict
+
+    def __setstate__(self, dict):
+        self.__dict__.update(dict)
+        self.base = None
+
 class GripperAction(Action):
-    def __init__(self, openArg, gripper):
+    def __init__(self, openArg, gripper, effort=None):
         self.open = openArg
         self.gripper = gripper
+        self.effort = effort
 
     def execute(self):
         if self.open:
             return self.gripper.open()
         else:
-            return self.gripper.close()
+            if self.effort is not None:
+                return self.gripper.close(self.effort)
+            else:
+                return self.gripper.close()
 
     def __getstate__(self):
         odict = self.__dict__.copy()
@@ -98,6 +215,7 @@ class GripperAction(Action):
 
     def __setstate__(self, dict):
         self.__dict__.update(dict)
+        self.effort = 50
         self.gripper = None
 
 class TuckAction(Action):
@@ -150,6 +268,7 @@ class MoveAction(Action):
         move_to_pose = PoseStamped()
         move_to_pose.header.frame_id = 'base_link'
         moved = True
+        print('wtf guys???', self.absolute)
         if self.absolute:
             #print(self.pose.pose.position)
             move_to_pose.pose.position = Point()
@@ -211,8 +330,40 @@ class MoveAction(Action):
             #print(self.pose)
 
             # NOTE: Find the tag marker in base link for the new pose
-            needed_marker = get_live_marker(self.tagId)
-            assert needed_marker
+            needed_marker = None
+            if desired_pose is not None:
+                print("We got a desired pose instead, moving to it...")
+                needed_marker = ar_track_alvar_msgs.msg.AlvarMarker()
+                needed_marker.pose.pose = copy.deepcopy(desired_pose)
+
+                # TODO(emersonn): What if it is because the fiducial is saved upside down lol?
+                # TODO(emersonn): HARDCODED!!!!!
+                # needed_marker.pose.pose.orientation.x = 0.7117
+                # needed_marker.pose.pose.orientation.y = -0.007
+                # needed_marker.pose.pose.orientation.z = -0.702
+                # needed_marker.pose.pose.orientation.w = 0.007
+                # needed_marker.pose.pose.orientation.x = self.former_tag_pose.pose.pose.orientation.x
+                # needed_marker.pose.pose.orientation.y = self.former_tag_pose.pose.pose.orientation.y
+                # needed_marker.pose.pose.orientation.z = self.former_tag_pose.pose.pose.orientation.z
+                # needed_marker.pose.pose.orientation.w = self.former_tag_pose.pose.pose.orientation.w
+
+                needed_marker.pose.pose.orientation = self.former_tag_pose.pose.pose.orientation
+
+                # needed_marker.pose.pose.position.z += 0.05
+
+                new_marker = createMarkerLOL(needed_marker.pose, 0)
+                # print('New marker:', new_marker)
+                marker_pub_WTFLOL.publish(new_marker)
+
+                # print('What if fiducial')
+                # WTF_marker = get_live_marker(0)
+                # new_marker = createMarkerLOL(WTF_marker.pose, 2)
+                # print('Marker for fiducial:', new_marker)
+                # marker_pub_WTFLOL.publish(new_marker)
+            else:
+                print('Working with a fiducial instead')
+                needed_marker = get_live_marker(self.tagId)
+                assert needed_marker
 
             #print("Goal pose:", needed_marker.pose.pose)
 
@@ -281,10 +432,15 @@ class MoveAction(Action):
             # new_pose.pose.position.x -= .166
             # new_pose.pose.position.y -= .024
 
-            marker_pub = rospy.Publisher('visualization_marker/', Marker, queue_size=5)
-            for marker in createMarkers(new_pose):
-                marker.header.frame_id = "base_link"
-                marker_pub.publish(marker)
+            # for marker in createMarkers(new_pose):
+            #     print('Publishing markers')
+            #     marker.header.frame_id = "base_link"
+            #     marker_pub.publish(marker)
+            new_marker = createMarkerLOL(new_pose, 1)
+            # print('New marker:', new_marker)
+            marker_pub_WTFLOL.publish(new_marker)
+
+            # print('Trying to move to pose:', new_pose)
 
             result = self.arm.move_to_pose(new_pose)
             if result is not None:
@@ -311,7 +467,10 @@ class DemonstrationProgram(object):
             print('Executing:', type(action).__name__)
             worked = False
             if (type(action).__name__ == 'MoveAction'):
-                worked = action.execute(fiducial if fiducial is not None else desired_pose)
+                if fiducial is None:
+                    worked = action.execute(desired_pose=desired_pose)
+                else:
+                    worked = action.execute(tagID=fiducial)
             else:
                 worked = action.execute()
             if not worked:
@@ -363,12 +522,15 @@ def get_live_markers():
 
     return copy.deepcopy(reader.markers)
 
-def create_new_program(gripper, arm):
+def create_new_program(head, torso, gripper, arm, base):
     new_program = DemonstrationProgram()
     print('\t add [abs] [tag] | to add a new pose relative to the abs, tag optional')
-
+    print('\t torso [height] | move torso to height')
+    print('\t head look_at [FRAME_ID] [X] [Y] [Z]')
+    print('\t head pan_tilt [PAN_ANG] [TILT_ANG]')
     print('\t open | to add an open gripper action')
-    print('\t close | to add a close gripper action')
+    print('\t close [effort (35-100)] | to add a close gripper action')
+    print('\t move [distance] | move the base forwards or backwards the given distance')
     print('\t tuck | tuck the arm')
     print('\t list | list all actions saved so far')
     print('\t tags | list all tags')
@@ -384,6 +546,11 @@ def create_new_program(gripper, arm):
     # 3. TODO: Add the basket to the planning scene
     # 4. TODO: Add picked up item as a collision object
     # TODO: Move arm back to handy position before segmenting again
+    # TODO: Logic in between in util.py for pose based segmentation (kinda, need to handle certain cases, like nothing detected in shelf)
+    #   Assume each kind of item is on a certain shelf: code Item to haev that (done, is in station instead)
+    #   Pose for the box is in the middle of the box: adjust as necessary. Need to adjust left hand side ones with more logic?? Or all left hand sides??
+    # // DONEEEEEEEE Lab 34 for aligned boxes instead of axis aligned. Maybe would fix stuff?
+    # TODO: Weird bug with fiducials being upside down need to look into stuff? The hardcoding
     # Max cluster size needs to be changed to like 30,000
 
     # !
@@ -458,13 +625,30 @@ def create_new_program(gripper, arm):
                 former_tag_pose,
             )
             new_program.add_action(new_action)
-            print('>> Added move action')
+            print('>> Added move arm action')
+        elif user_input.split()[0] == 'torso':
+            new_program.add_action(TorsoAction(float(user_input.split()[1]), torso))
+            print('>> Added torso action')
+        elif user_input.split()[0] == 'head':
+            rest = user_input.split()[1:]
+            command = rest[0]
+            print('head command', command, command is not 'look_at', command != 'pan_tilt')
+            if command != 'look_at' and command != 'pan_tilt':
+                print("wrong command")
+                break
+            new_program.add_action(HeadAction(rest, head))
+            print('>> Added head action')
         elif user_input == 'open':
             new_program.add_action(GripperAction(True, gripper))
             print('>> Added open action')
-        elif user_input == 'close':
-            new_program.add_action(GripperAction(False, gripper))
+        elif user_input.split()[0] == 'close':
+            effort = int(user_input.split()[1])
+            new_program.add_action(GripperAction(False, gripper, effort))
             print('>> Added close action')
+        elif user_input.split()[0] == 'move':
+            distance = float(user_input.split()[1])
+            new_program.add_action(BaseAction(base, distance))
+            print('>> Added move base action')
         elif user_input == 'tuck':
             new_program.add_action(TuckAction(arm))
             print('>> Added tuck action')
@@ -488,33 +672,66 @@ def print_main_actions():
     print('')
 
 class ProgramHandler(object):
-    def __init__(self, load_file):
-        print("Initializing the gripper and arm...")
-        print("To quit before gripper/arm are initialized, do ctrl-C and then ctrl-D.")
-        gripper = Gripper()
-        print("Gripper ready...")
-        arm = Arm()
-        print("Arm ready...")
-        self.program_info = load_program(load_file, gripper, arm)
+    def __init__(self, load_file, gripper, arm, torso, head, base):
+        # print("Initializing the gripper and arm...")
+        # print("To quit before gripper/arm are initialized, do ctrl-C and then ctrl-D.")
+        # gripper = Gripper()
+        # print("Gripper ready...")
+        # arm = Arm()
+        # print("Arm ready...")
+        # torso = Torso()
+        # print("Torso ready...")
+        # head = Head()
+        # print("Head ready...")
+        self.program_info = load_program(load_file, gripper, arm, torso, head, base)
 
     def get_program(self, program_name):
         return self.program_info[program_name]
     def get_drop(self):
-        return self.program_info["dropoffnew"]
+        return self.program_info["drop"] #dropoffnew
+    def get_tuck(self):
+        return self.program_info["tuck"] #tuckmyarmlol
 
-def load_program(name, gripper, arm):
+    def get_shelf(self, shelf):
+        if shelf == 2:
+            return self.get_program("b4secondshelf") #b4secondshelf
+        if shelf == 3:
+            return self.get_program("b4thirdshelf") #b4thirdshelf
+        print("you did something wrong to get program")
+
+    def get_raise(self):
+    	return self.get_program("raise")
+
+    def get_forward(self):
+        return self.get_program("moveforward")
+
+    def get_backward(self):
+        return self.get_program("moveback")
+
+def load_program(name, gripper, arm, torso, head, base):
     programs = {}
     try:
         with open(name, "r") as f:
             programs = pickle.load(f)
+            #try:
+            #    programs = pickle.load(f)
+            #except EOFError:
+            #    print("error while unpickling")
             for key, program in programs.items():
                 for action in program.actions:
                     if type(action).__name__ == 'GripperAction':
                         action.gripper = gripper
                     elif type(action).__name__ == 'MoveAction' or type(action).__name__ == 'TuckAction':
                         action.arm = arm
+                    elif type(action).__name__ == 'TorsoAction':
+                        action.torso = torso
+                    elif type(action).__name__ == 'HeadAction':
+                        action.head = head
+                    elif type(action).__name__ == 'BaseAction':
+                        action.base = base
     except IOError:
         print("error while loading")
+
     return programs
 
 def main():
@@ -527,17 +744,27 @@ def main():
     print("Gripper ready...")
     arm = Arm()
     print("Arm ready...")
+    torso = Torso()
+    print("Torso ready...")
+    head = Head()
+    print("Head ready...")
+    base = Base()
+    print("Base ready...")
 
     # TODO(emersonn): This is where we start the interface
     print('Welcome to the best demonstration program in North America')
-
-    FILENAME = "/home/team3/catkin_ws/src/cse481c/acciobot_main/demonstration.pickle"
-    programs = load_program(FILENAME, gripper, arm)
+    OK = False
+    FILENAME = "/home/team3/catkin_ws/src/cse481c/acciobot_main/satdemonstration.pickle"
+    programs = load_program(FILENAME, gripper, arm, torso, head, base)
+    OK = True
+    with open(FILENAME + "copy", "w") as f:
+        pickle.dump(programs, f)
 
     # For persisting the file to disk
     def pickle_it_up():
-        with open(FILENAME, "w") as f:
-            pickle.dump(programs, f)
+        if OK:
+            with open(FILENAME, "w") as f:
+                pickle.dump(programs, f)
 
     def stop_things():
         pickle_it_up()
@@ -564,7 +791,7 @@ def main():
                 yes = raw_input()
                 if not yes.startswith('y') and not yes.startswith('Y'):
                     continue
-            new_program = create_new_program(gripper, arm)
+            new_program = create_new_program(head, torso, gripper, arm, base)
             programs[program_name] = new_program
         elif (command == 'execute'):
             # print('1')

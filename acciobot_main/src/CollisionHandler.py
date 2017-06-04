@@ -5,7 +5,7 @@ import fetch_api
 import rospy
 
 import acciobot_main.msg
-
+import std_msgs.msg
 
 def wait_for_time():
     """Wait for simulated time to begin.
@@ -29,6 +29,11 @@ class CollisionHandler(object):
                 first_collision.pose.position.x, first_collision.pose.position.y, first_collision.pose.position.z,
             )
 
+    def clear_callback(self, clear_msg):
+        if clear_msg.data:
+            print("CLEARING PLANNING SCNEE")
+            self.planning_scene.clear()
+
 # published mock point cloud is found in rosrun applications point_cloud_demo.py
 # run perception point_cloud_demo w/ published mock_point_cloud
 # run collision handler
@@ -39,6 +44,7 @@ def main():
 
     handler = CollisionHandler()
     item_sub = rospy.Subscriber('accio_collisions', acciobot_main.msg.CollisionList, handler.callback)
+    clear_sub = rospy.Subscriber('accio_clear_collisions', std_msgs.msg.Bool, handler.clear_callback)
 
     rospy.spin()
 

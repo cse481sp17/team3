@@ -3,7 +3,7 @@ import geometry_msgs.msg
 from util import Station
 import pickle
 # Contains a file with pickled poses of the stations (currently in form station1, station2, ... cashier)
-STATIONS_FILE = "/home/team3/catkin_ws/src/cse481c/map_annotator/stations.pickle"
+STATIONS_FILE = "/home/team3/catkin_ws/src/cse481c/map_annotator/LOL.pickle" #"/home/team3/catkin_ws/src/cse481c/map_annotator/stations.pickle"
 
 # key for cashier in STATIONS_FILE
 CASHIER = "cashier"
@@ -21,7 +21,14 @@ class StationInformation(object):
                     # Holds raw info from map annotator about stations
                     self.station_info = pickle.load(f)
         except EOFError:
-            self.station_info = {}
+            print("couldn't load stations")
+            wtf = geometry_msgs.msg.PoseWithCovarianceStamped()
+            self.station_info = {'station1': wtf, 'station2': wtf, 'cashier': wtf}
+            location = geometry_msgs.msg.PoseStamped()
+            self.stations = {}
+            self.stations[0] = Station(location, 0, self.navigator, wtf)
+            self.stations[1] = Station(location, 1, self.navigator, wtf)
+            return
 
         # Any translation between the station_info file to
         #   station ID occurs here
@@ -33,7 +40,7 @@ class StationInformation(object):
             location = geometry_msgs.msg.PoseStamped()
             location.header = self.station_info[name].header
             location.pose = self.station_info[name].pose.pose
-            self.stations[station_id] = Station(location, station_id, self.navigator)
+            self.stations[station_id] = Station(location, station_id, self.navigator, self.station_info[name])
         print(self.stations)
 
     def get_station(self, station_number):
@@ -41,7 +48,7 @@ class StationInformation(object):
 
     def get_cashier(self):
         return self.get_station(CASHIER_ID)
-    
+
     def get_raw_info_by_name(self, station_number):
         name = self.get_name_from_id(station_number)
         return self.station_info[name]

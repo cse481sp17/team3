@@ -17,10 +17,11 @@ from sensor_msgs.msg import PointCloud2
 import acciobot_main.msg
 
 class OrderHandler(object):
-    def __init__(self, station_handler, program_handler):
+    def __init__(self, station_handler, program_handler, status_pub):
         self.order_queue = [] # LOL it's not a queue
         self.station_handler = station_handler
         self.program_handler = program_handler
+        self.pub = status_pub
 
         self.seg_pipe_pub = rospy.Publisher('seg_pipe_go', PointCloud2, queue_size=10)
 
@@ -29,6 +30,7 @@ class OrderHandler(object):
         # TODO read from the web / command line
         # TODO(emersonn): We need to wrap every item with the item wrapper found in utils IF the items we are getting are of type Item Message
         available_stations = self.station_handler.get_station_ids()
+        print(available_stations)
         available_stations.remove(0) # cashier is at 0
         # for num in available_stations:
         #     self.order_queue.append(self.make_fake_order_single_item(num))
@@ -54,7 +56,7 @@ class OrderHandler(object):
     	third_item.feducial_id = 0
         fake_program = self.program_handler.get_program("hairnewaction")
         third = Item(third_item, fake_station, fake_program, first_drop)
-        fake_order = Order([third, first])
+        fake_order = Order([third, first], self.pub)
         return fake_order
 
     def make_fake_order_single_item(self, station_number):
@@ -70,7 +72,7 @@ class OrderHandler(object):
 
         fake_item = Item(new_item_msg, fake_station, fake_program, drop_program)
 
-        fake_order = Order([fake_item])
+        fake_order = Order([fake_item], self.pub)
         return fake_order
 
     def remove_order(self, order_id):
@@ -87,11 +89,22 @@ class OrderHandler(object):
         items = order_msg.items
         itemList = []
         for item in items:
-            program = self.program_handler.get_program(item.item_type)
-            drop = self.program_handler.get_drop()
-            it = Item(item, self.station_handler.get_station(0), program, drop, self.seg_pipe_pub)
-            itemList.append(it)
-        order = Order(itemList, order_msg)
+            for i in range(item.quantity):
+                program = self.program_handler.get_program(item.item_type)
+                drop = self.program_handler.get_drop()
+                tuck = self.program_handler.get_tuck()
+                # TODO(emersonn): HARDCODED SHELF AND STATION. Need to put these correctly!
+                curr_shelf = 2
+                it = Item(
+                    item,
+                    self.station_handler.get_station(1), program, drop, tuck, self.seg_pipe_pub,
+                    curr_shelf, self.program_handler.get_shelf(curr_shelf),
+                    self.program_handler.get_raise(),
+                    self.program_handler.get_forward(),
+                    self.program_handler.get_backward()
+                )
+                itemList.append(it)
+        order = Order(itemList, order_msg, self.pub)
         self.order_queue.append(order)
 
     # should be called before we put an order on the queue

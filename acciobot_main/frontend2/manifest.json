@@ -1,0 +1,6 @@
+{
+  "name": "dispatch",
+  "short_name": "dispatch",
+  "start_url": "/",
+  "display": "standalone"
+}

@@ -42,7 +42,8 @@ class ActuatorServer(object):
 		rospy.Subscriber('/amcl_pose', geometry_msgs.msg.PoseWithCovarianceStamped, self._handle_pose_callback)
 
 		self.names = {}
-		filename = rospy.get_param('~pose_file')
+		filename = "/home/team3/catkin_ws/src/cse481c/map_annotator/LOL.pickle"
+		#filename = rospy.get_param('~pose_file')
 		try:
 			with open(filename, "r") as f:
 				self.names = pickle.load(f)
@@ -60,7 +61,7 @@ class ActuatorServer(object):
 
 		self.pose_pub.publish(pose_message)
 
-		print("initiated actuator nodes with", self.names)
+		print("initiated actuator nodes with", self.names, "from", filename)
 	def _create_marker(self, name):
 		self.name_markers[name] = InteractiveMarker()
 		self.name_markers[name].header.frame_id = "map"
@@ -175,6 +176,7 @@ class ActuatorServer(object):
 		self.pose = copy.deepcopy(data)
 
 	def pickle_it_up_bro(self):
+		print("pickling", self.names)
 		with open("/home/team3/catkin_ws/src/cse481c/map_annotator/LOL.pickle", "w") as f:
 			pickle.dump(self.names, f)
 

@@ -1,10 +1,19 @@
 #!/usr/bin/env python
-
+import sys
 import rospy
 from acciobot_main.srv import HandleOrder, HandleOrderRequest
 from acciobot_main.msg import Item
 import std_msgs.msg
 import acciobot_main.msg
+
+finished = {}
+
+def finishedCallback(response):
+	global finished
+	key = str(response.data)[6:].split(" ")[0]
+	num = int(key)
+	finished[num] = response
+	print response.data
 
 class Stock():
 	def __init__(self):
@@ -84,6 +93,7 @@ def print_intro():
 	print ("   quit: Exit program.")
 
 def get_info(cart, stock):
+	global finished
 	answer = ""
 	command = ""
 	name = ""
@@ -107,18 +117,23 @@ def get_info(cart, stock):
 				cart._add(name, count, stock)
 			elif answer == "del":
 				cart._del(name)
-			elif answer == "cancel":
-				print "Unimplemented: trying to cancel order",name
+			elif answer == "status":
+				print finished[name]
 		except:
+			print finished
+			e = sys.exc_info()[0]
+			print e
 			print "unknown command"
 	return False
 
 def main():
+	global finished
 	rospy.init_node('command_line_order')
 	rospy.wait_for_service('acciobot_main/handle_order')
 	send_order = rospy.ServiceProxy('acciobot_main/handle_order', HandleOrder)
 	stock = Stock()
 	rospy.Subscriber('available_items', acciobot_main.msg.ItemStock, stock._callback)
+	rospy.Subscriber('customer_update', std_msgs.msg.String, finishedCallback)
 	order_pub = rospy.Publisher('update_items', acciobot_main.msg.ItemStock, latch=True, queue_size=10)
 
 	while True:
@@ -129,7 +144,7 @@ def main():
 			done = get_info(cart, stock)
 		try:
 			items = cart._contents(stock)
-			response = send_order(HandleOrderRequest.ORDER,items)
+			response = str(send_order(HandleOrderRequest.ORDER,items)).split(" ")[1]
 			print "Your order number is",response
 			stocker = acciobot_main.msg.ItemStock()
 			stocker.items = items
@@ -137,6 +152,7 @@ def main():
 			for x in stocker.items:
 				x.quantity = -1 * x.quantity
 			order_pub.publish(stocker)
+			finished[int(response)] = "SUBMITTED"
 		except rospy.ServiceException as exc:
 			print("Service did not process request: " + str(exc))
 

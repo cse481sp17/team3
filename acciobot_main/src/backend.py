@@ -17,13 +17,14 @@ import std_msgs.msg
 #   roslaunch applications nav_rviz.launch (for now) TODO make our own launch file that starts nav
 #   rosrun acciobot_main backend.py
 
-PROGRAM_FILE = '/home/team3/catkin_ws/src/cse481c/acciobot_main/demonstration.pickle'
+PROGRAM_FILE = '/home/team3/catkin_ws/src/cse481c/acciobot_main/satdemonstration.pickle'
 
 class RobotState(object):
-    def __init__(self, order_handler):
+    def __init__(self, order_handler, status_pub):
         self.current_order = None
         self.lock = threading.Lock()
         self.order_handler = order_handler
+        self.status_pub = status_pub
 
     def dispatch_order(self, order_id):
         with self.lock:
@@ -33,6 +34,8 @@ class RobotState(object):
     def finished_order(self):
         with self.lock:
             self.current_order = None
+            message = "DONE"
+            self.status_pub.publish(std_msgs.msg.String(message))
 
     def get_current_order(self):
         with self.lock:
@@ -64,16 +67,29 @@ def printHI(response):
     rospy.logerr("ARGH")
 
 def main():
+    rospy.logerr("before before lineee")
     rospy.init_node('accio_backend')
     wait_for_time()
-    navigator = None
+    # TODO incorporate navigation
+    navigator = Navigator.Navigator()
     station_handler = StationInformation.StationInformation(navigator)
-    program_handler = ProgramHandler(PROGRAM_FILE)
+    print("Initializing the gripper, arm, torso, head...")
+    print("To quit before these are initialized, do ctrl-C and then ctrl-D.")
     gripper = Gripper()
+    print("Gripper ready...")
     arm = Arm()
-    load_program(PROGRAM_FILE, gripper, arm)
-    order_handler = OrderHandler.OrderHandler(station_handler, program_handler)
-    robot_state = RobotState(order_handler)
+    print("Arm ready...")
+    torso = Torso()
+    print("Torso ready...")
+    head = Head()
+    print("Head ready...")
+    base = Base()
+    print("Base ready...")
+    program_handler = ProgramHandler(PROGRAM_FILE, gripper, arm, torso, head, base)
+    #load_program(PROGRAM_FILE, gripper, arm, torso, head) # karan commented this out, refactoring
+    status_pub = rospy.Publisher('print_update', std_msgs.msg.String, queue_size=10)
+    order_handler = OrderHandler.OrderHandler(station_handler, program_handler, status_pub)
+    robot_state = RobotState(order_handler, status_pub)
     rospy.sleep(1)
 
     #rospy.Subscriber('available_items', acciobot_main.msg.ItemStock, printHI)
@@ -81,18 +97,20 @@ def main():
     # dispatch_sub = rospy.Subscriber('dispatch_order', acciobot_main.msg.Order, printHI)
 
     def stop_things():
-        #navigator.stop()
+        navigator.stop()
         arm.cancel_all_goals()
+        base.stop()
     rospy.on_shutdown(stop_things)
 
-    rospy.logerr("before line")
+    rospy.logerr("Waiting for orders")
 
     while True:
         if robot_state.get_current_order() is not None:
-            rospy.logerr("Reached line")
+            rospy.logerr("Robot state has a current order")
             order = order_handler.remove_order(robot_state.get_current_order())
-            order.fulfill_order()
-            navigator.move_to_posestamped(station_handler.get_cashier().location)
+            success = order.fulfill_order()
+            # TODO: Uncomment when navigation is ready
+            #navigator.move_to_posestamped(station_handler.get_cashier().location)
             robot_state.finished_order()
         rospy.sleep(1)
 

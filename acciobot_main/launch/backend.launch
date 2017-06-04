@@ -7,15 +7,22 @@
   <include file="$(find fetch_api)/launch/ar_desktop.launch">
     <arg name="cam_image_topic" value="$(arg cam_image_topic)" />
   </include>
-
+  <include file="$(find fetch_navigation)/launch/fetch_nav.launch">
+    <arg name="map_file" value="/home/team3/maps/playground.yaml" />
+  </include>
   <include file="$(find fetch_api)/launch/move_group.launch" />
 
   <node pkg="perception" type="point_cloud_demo" name="point_cloud_demo" output="screen">
     <remap from="cloud_in" to="$(arg cam_image_topic)" />
   </node>
 
+  <node pkg="tf" type="static_transform_publisher" name="base_broadcaster" args="0 0 0 0 0 0 1 map base 100" />
+
+  <!-- <node name="point_cloud1_broadcaster" pkg="applications" type="point_cloud_demo.py" args="/home/team3/bags/newitemsturned.bag base" respawn="true" /> -->
+  <node name="point_cloud1_broadcaster" pkg="applications" type="point_cloud_demo.py" args="/home/team3/bags/newitems.bag base" respawn="true" />
+
   <node pkg="acciobot_main" type="CollisionHandler.py" name="collision_handler" output="screen"></node>
-  <node pkg="acciobot_main" type="backend.py" name="accio_backend" output="screen">
+  <node pkg="acciobot_main" type="backend.py" name="accio_backend" launch-prefix="xterm  -hold -e" output="screen">
     <remap from="cloud_in" to="$(arg cam_image_topic)" />
   </node>
 </launch>

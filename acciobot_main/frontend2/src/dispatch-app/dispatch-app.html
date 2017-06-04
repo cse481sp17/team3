@@ -1,0 +1,53 @@
+<link rel="import" href="../../bower_components/polymer/polymer.html">
+<link rel="import" href="../../bower_components/ros-websocket/ros-websocket.html">
+
+<dom-module id="dispatch-app">
+  <template>
+    <style>
+      :host {
+        display: block;
+      }
+    </style>
+<ros-websocket auto
+  ros="{{ros}}"
+  on-connection="handleConnection"
+  on-close="handleClose"
+  on-error="handleError">
+</ros-websocket>
+
+<h2>Dispatch Fetch</h2>
+<div>
+  Websocket status: {{status}}
+</div>
+    <h2>Hello [[prop1]]</h2>
+  </template>
+
+  <script>
+    Polymer({
+
+      is: 'dispatch-app',
+
+      properties: {
+        prop1: {
+          type: String,
+          value: 'dispatch-app',
+        },
+      },
+
+handleConnection: function() {
+  this.status = 'Connected to the websocket server.';
+  console.log("hello");
+},
+
+handleClose: function() {
+  this.status = 'Closed connection to websocket server.';
+  console.log("hello");
+},
+
+handleError: function() {
+  this.status = 'Error connecting to websocket server.';
+  console.log("hello");
+},
+    });
+  </script>
+</dom-module>

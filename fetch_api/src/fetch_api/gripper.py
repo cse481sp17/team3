@@ -24,7 +24,7 @@ class Gripper(object):
         """
         goal = control_msgs.msg.GripperCommandGoal()
         goal.command.position = OPENED_POS
-        goal.command.max_effort = self.MAX_EFFORT
+        goal.command.max_effort = 100 # todo: MAX_EFFORT
         self.client.send_goal(goal)
         self.client.wait_for_result()
         return True # todo figure out how to know if it didn't work
@@ -36,6 +36,7 @@ class Gripper(object):
             max_effort: The maximum effort, in Newtons, to use. Note that this
                 should not be less than 35N, or else the gripper may not close.
         """
+        print("closing with", max_effort)
         goal = control_msgs.msg.GripperCommandGoal()
         goal.command.position = CLOSED_POS
         goal.command.max_effort = max_effort
