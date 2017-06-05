@@ -21,6 +21,24 @@ class CollisionHandler(object):
         # self.planning_scene.clear()
 
         # self.planning_scene.removeCollisionObject('one_box')
+        if box_msg.title == 'got_items':
+            print('We got items to make collision')
+
+            for i, collision in enumerate(box_msg.collisions):
+                first_collision = collision
+
+                self.planning_scene.addBox('item' + str(i),
+                    first_collision.scale.x, first_collision.scale.y, first_collision.scale.z,
+                    first_collision.pose.position.x, first_collision.pose.position.y, first_collision.pose.position.z,
+                )
+
+            return
+
+        self.planning_scene.addBox('basket',
+            0.27, 0.34, 0.13,
+            0.05, 0, 0.36,
+        )
+
         for i, collision in enumerate(box_msg.collisions):
             first_collision = collision
 
