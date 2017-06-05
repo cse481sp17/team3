@@ -47,7 +47,8 @@ class StationInformation(object):
         for name in self.station_info:
             station_id = int(name[len(STATION_PREFIX)]) if name.startswith(STATION_PREFIX) else CASHIER_ID
             location = geometry_msgs.msg.PoseStamped()
-            location.header = 'map'
+            location.header = self.station_info[name].header
+            location.header.frame_id = 'map'
             location.pose = self.station_info[name].pose.pose
             print(station_id, name, location.pose)
             self.stations[station_id] = Station(location, station_id, self.navigator, self.station_info[name])
