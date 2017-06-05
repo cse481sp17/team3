@@ -250,7 +250,7 @@ class Item(object):
         non_item_markers = []
         for shelf in range(4):
             for mark in found_items.tables[shelf].markers:
-                if mark != min_item and mark.x > min_item.pose.position.x - 0.10:
+                if mark != min_item and mark.pose.position.x > min_item.pose.position.x - 0.10:
                     new_coll = acciobot_main.msg.BoxCollision()
                     width = max(mark.scale.x, mark.scale.y)
                     depth = min(mark.scale.x, mark.scale.y)
