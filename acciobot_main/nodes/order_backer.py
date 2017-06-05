@@ -44,8 +44,9 @@ def create_box_marker():
 class ActuatorServer(object):
     def __init__(self):
         self.order_pub = rospy.Publisher('/handle_order', acciobot_main.msg.Order, latch=True)
-
+        self.cancel_pub = rospy.Publisher('/cancel_order', std_msgs.msg.String)
 	self.items = []
+	self.cancel_id = 0
 
     def handle_send_fetch(self, request):
         rospy.loginfo("Attempting: " + str(request))
@@ -56,7 +57,14 @@ class ActuatorServer(object):
             self.order_id = next_id()
             rospy.loginfo("ORDER request")
         else:
-            rospy.logerr('none of these work')
+            rospy.loginfo("CANCEL request")
+            self.cancel_id = request.cancel_id
+            self.cancel_pub.publish(std_msgs.msg.String(str(self.cancel_id)))
+            response = HandleOrderResponse()
+            response.id = 0
+            response.response_string = "cancel"
+            return response
+            
 
         #send order message and receive response
 
@@ -67,6 +75,7 @@ class ActuatorServer(object):
         self.order_pub.publish(order_message)
 	response = HandleOrderResponse()
 	response.id = self.order_id
+        response.response_string = "order" 
 	return response
 
     def _handle_pose_callback(self, data):

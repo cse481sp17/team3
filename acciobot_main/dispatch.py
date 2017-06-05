@@ -62,6 +62,11 @@ def printPending():
 		print x,"\t",item_names
 	print
 
+def cancelId(response):
+	num = int(response.data)
+	orders.pop(num)
+	print "Order",num,"cancelled by customer"
+
 
 def printUpdate(response):
 	global active
@@ -81,6 +86,7 @@ def main():
 	rospy.init_node('command_line_dispatch')
 	rospy.Subscriber('handle_order', acciobot_main.msg.Order, addOrder)
 	rospy.Subscriber('print_update', std_msgs.msg.String, printUpdate)
+	rospy.Subscriber('cancel_order', std_msgs.msg.String, cancelId)
 	dispatch_pub = rospy.Publisher('dispatch_order', acciobot_main.msg.Order, latch=True, queue_size=10)
 	customer_pub = rospy.Publisher('customer_update', std_msgs.msg.String, queue_size=10)
 	rospy.sleep(1)

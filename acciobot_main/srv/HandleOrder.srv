@@ -3,6 +3,7 @@ string CANCEL=cancel
 
 string command
 acciobot_main/Item[] items
+int64 cancel_id
 ---
 int64 id
-
+string response_string

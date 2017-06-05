@@ -10,7 +10,7 @@ from visualization_msgs.msg import Marker, MarkerArray
 import tf
 
 from fetch_api import Arm, Gripper, ArmJoints, Torso, Head, Base
-
+import tf.transformations as tft
 import rospy
 
 import copy
@@ -18,7 +18,7 @@ import actionlib
 
 import numpy as np
 
-marker_pub_WTFLOL = rospy.Publisher('/wtf_is_this', Marker, queue_size=5)
+marker_pub_WTFLOL = rospy.Publisher('/marker_move_to', Marker, queue_size=5)
 
 GRIPPER_MESH = 'package://fetch_description/meshes/gripper_link.dae'
 L_FINGER_MESH = 'package://fetch_description/meshes/l_gripper_finger_link.STL'
@@ -53,7 +53,7 @@ def createMarkerLOL(ps, num):
     marker1.header.frame_id = "base_link"
     marker1.ns = "demo_program"
     marker1.id = num
-    marker1.type = Marker.CUBE
+    marker1.type = Marker.ARROW
 
     marker1.pose = copy.deepcopy(ps.pose)
     # marker1.pose.position.x = 1
@@ -215,7 +215,7 @@ class GripperAction(Action):
 
     def __setstate__(self, dict):
         self.__dict__.update(dict)
-        self.effort = 50
+        self.effort = 75
         self.gripper = None
 
 class TuckAction(Action):
@@ -230,7 +230,17 @@ class TuckAction(Action):
         js.set_forearm_roll(0)
         js.set_wrist_flex(1.66)
         js.set_wrist_roll(0)
-        return self.arm.move_to_joints(js)
+        values = js.values()
+        names = js.names()
+        l = []
+        for name, val in zip(names, values):
+            l.append((name, val))
+        result = self.arm.move_to_joint_goal(l)
+        if result is None:
+            return True
+        else:
+            print("Tuck failed, result:", result)
+            return False
     # really does nothing
     def __getstate__(self):
         odict = self.__dict__.copy()
@@ -348,6 +358,16 @@ class MoveAction(Action):
                 # needed_marker.pose.pose.orientation.w = self.former_tag_pose.pose.pose.orientation.w
 
                 needed_marker.pose.pose.orientation = self.former_tag_pose.pose.pose.orientation
+                quaternion = (
+                    needed_marker.pose.pose.orientation.x,
+                    needed_marker.pose.pose.orientation.y,
+                    needed_marker.pose.pose.orientation.z,
+                    needed_marker.pose.pose.orientation.w)
+                euler = tft.euler_from_quaternion(quaternion)
+                roll = euler[0]
+                pitch = euler[1]
+                yaw = euler[2]
+                print("The yaw in demonst is", yaw, "roll is", roll, "pitch is", pitch)
 
                 # needed_marker.pose.pose.position.z += 0.05
 
@@ -372,7 +392,7 @@ class MoveAction(Action):
 
             # 1: Find the position of the wrist in the tag t1 frame
             whole_thing = copy.deepcopy(self.former_tag_pose)
-            former_pose = self.former_tag_pose.pose.pose
+            former_pose = copy.deepcopy(self.former_tag_pose.pose.pose)
             whole_thing.pose.pose.position = [former_pose.position.x, former_pose.position.y, former_pose.position.z]
             whole_thing.pose.pose.orientation = [former_pose.orientation.x, former_pose.orientation.y, former_pose.orientation.z, former_pose.orientation.w]
             # print(self.former_tag_pose)

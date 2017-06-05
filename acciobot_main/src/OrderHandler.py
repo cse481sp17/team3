@@ -93,8 +93,8 @@ class OrderHandler(object):
                 program = self.program_handler.get_program(item.item_type)
                 drop = self.program_handler.get_drop()
                 tuck = self.program_handler.get_tuck()
-                # TODO(emersonn): HARDCODED SHELF AND STATION. Need to put these correctly!
-                curr_shelf = 2
+                # DONE: HARDCODED SHELF AND STATION. Need to put these correctly!
+                curr_shelf = self.station_handler.get_shelf(item.item_id)
                 it = Item(
                     item,
                     self.station_handler.get_station(1), program, drop, tuck, self.seg_pipe_pub,

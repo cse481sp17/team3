@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 import geometry_msgs.msg
 from util import Station
+import copy
 import pickle
 # Contains a file with pickled poses of the stations (currently in form station1, station2, ... cashier)
-STATIONS_FILE = "/home/team3/catkin_ws/src/cse481c/map_annotator/LOL.pickle" #"/home/team3/catkin_ws/src/cse481c/map_annotator/stations.pickle"
+STATIONS_FILE = "/home/team3/catkin_ws/src/cse481c/map_annotator/real.pickle" #"/home/team3/catkin_ws/src/cse481c/map_annotator/stations.pickle"
 
 # key for cashier in STATIONS_FILE
 CASHIER = "cashier"
@@ -20,6 +21,9 @@ class StationInformation(object):
             with open(STATIONS_FILE, "r") as f:
                     # Holds raw info from map annotator about stations
                     self.station_info = pickle.load(f)
+                    self.station_info['cashier'] = copy.deepcopy(self.station_info['cashier'])
+                    self.station_info['cashier'].pose.pose.position.x = -1.72
+                    self.station_info['cashier'].pose.pose.position.y = 0.31
         except EOFError:
             print("couldn't load stations")
             wtf = geometry_msgs.msg.PoseWithCovarianceStamped()
@@ -28,6 +32,7 @@ class StationInformation(object):
             self.stations = {}
             self.stations[0] = Station(location, 0, self.navigator, wtf)
             self.stations[1] = Station(location, 1, self.navigator, wtf)
+
             return
 
         # Any translation between the station_info file to
@@ -40,11 +45,19 @@ class StationInformation(object):
             location = geometry_msgs.msg.PoseStamped()
             location.header = self.station_info[name].header
             location.pose = self.station_info[name].pose.pose
+            print(station_id, name, location.pose)
             self.stations[station_id] = Station(location, station_id, self.navigator, self.station_info[name])
         print(self.stations)
 
+
+
+        self.shelves = {1:2,2:3,3:2,4:3}
+
     def get_station(self, station_number):
         return self.stations[station_number]
+
+    def get_shelf(self, item_id):
+        return self.shelves[item_id]
 
     def get_cashier(self):
         return self.get_station(CASHIER_ID)

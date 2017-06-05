@@ -42,12 +42,14 @@ class ActuatorServer(object):
 		rospy.Subscriber('/amcl_pose', geometry_msgs.msg.PoseWithCovarianceStamped, self._handle_pose_callback)
 
 		self.names = {}
-		filename = "/home/team3/catkin_ws/src/cse481c/map_annotator/LOL.pickle"
+		filename = "/home/team3/catkin_ws/src/cse481c/map_annotator/simstations.pickle"
 		#filename = rospy.get_param('~pose_file')
 		try:
 			with open(filename, "r") as f:
 				self.names = pickle.load(f)
 		except EOFError:
+			self.names = {}
+		except IOError:
 			self.names = {}
 
 		self.pose = None
@@ -177,7 +179,7 @@ class ActuatorServer(object):
 
 	def pickle_it_up_bro(self):
 		print("pickling", self.names)
-		with open("/home/team3/catkin_ws/src/cse481c/map_annotator/LOL.pickle", "w") as f:
+		with open("/home/team3/catkin_ws/src/cse481c/map_annotator/simstations.pickle", "w") as f:
 			pickle.dump(self.names, f)
 
 

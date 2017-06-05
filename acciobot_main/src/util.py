@@ -17,6 +17,14 @@ import std_msgs.msg
 
 from geometry_msgs.msg import Pose, PoseStamped
 
+from sound_play.msg import SoundRequest
+from sound_play.libsoundplay import SoundClient
+
+soundhandle = SoundClient()
+rospy.sleep(1)
+
+voice = 'voice_kal_diphone'
+
 clear_pub = rospy.Publisher('accio_clear_collisions', std_msgs.msg.Bool, queue_size=5)
 
 HARDCODED_LOL_HEIGHTS = {
@@ -86,13 +94,27 @@ class Order(object):
         self.status_pub.publish(std_msgs.msg.String(message))
         print(message)
         for item in self.items:
-            done = item.fulfill_item()
+            done = False
+            tries = 0
+
+            while not done:
+                soundhandle.say('I am about to get an item, hurrah!', voice)
+                done = item.fulfill_item()
+                tries += 1
+
+                if not done:
+                    item.goback.execute()
+                if tries == 2 and not done:
+                    print('We tried two times and meh for item')
+                    break
+
             if not done:
                 message = "Aborting order " + str(self.order_msg.order_id)
                 self.status_pub.publish(std_msgs.msg.String(message))
                 print(message)
                 return done
-        message = "Finishing order " + str(self.order_msg.order_id)
+
+            message = "Finishing order " + str(self.order_msg.order_id)
         self.status_pub.publish(std_msgs.msg.String(message))
         print(message)
         return True
@@ -107,8 +129,9 @@ class Station(object):
 
     # Navigates Fetch to the location of this station
     def attract_fetch(self):
-        print("Going to station WE COMMENTED THIS OUT", self.station_id)
-        #self.navigator.move_to_posestamped(self.location) #TODO uncomment this
+        print("Going to station WE COMMENTED THIS OUT", self.station_id, "press enter to continue")
+        raw_input()
+        self.navigator.move_to_posestamped(self.location) #TODO uncomment this
 
 class Item(object):
     def __init__(self, item, station, program, drop, tuck, seg_pipe_pub, shelf, shelf_program, raisez, goforward, goback):
@@ -126,26 +149,48 @@ class Item(object):
         self.goback = goback
 
         self.seg_pipe_pub = seg_pipe_pub
+        self.torsoed = False
 
     def fulfill_item(self):
         self.go_to_item()
         desired_pose = self.locate_item()
-        done = self.grab_and_drop_item(desired_pose)
+        done = False
+
+        tries = 0
+        while not done:
+            print("We're about to call into perceiving!")
+            # raw_input()
+            located_pose = self.locate_item()
+            if located_pose == False:
+                return False
+            done = self.grab_and_drop_item(located_pose)
+
+            tries += 1
+            if not done:
+                print('Retrying, we are on try', tries)
+            if tries == 3 and not done:
+                return done
+
         return done
 
     def go_to_item(self):
         self.station.attract_fetch()
 
-    def locate_item(self):
+    def locate_item(self, recursion_depth=None):
         # TODO(emersonn): UNCOMMENT THIS AS NECESSARY
+        if recursion_depth is not None and recursion_depth > 10:
+            return False
+
         print('UNCOMMEN THIS')
-        # self.shelf_program.execute()
+        if not self.torsoed:
+            self.shelf_program.execute()
+            self.torsoed = True
         # TODO(emersonn): Read from arguments instead, this is HARDCODED!
         new_point_cloud = rospy.wait_for_message("cloud_in", PointCloud2)
         #new_point_cloud = rospy.wait_for_message("/head_camera/depth_registered/points", PointCloud2)
 
         self.seg_pipe_pub.publish(new_point_cloud)
-        print('Looking on shelf:', self.shelf, 'for item')
+        print('Looking on shelf:', self.shelf, 'for item', self.item.item_id)
         print("Yo, we're sending a message to the segmentation pipeline")
         print("Waiting for message LOL")
 
@@ -168,13 +213,24 @@ class Item(object):
         item_height = HARDCODED_LOL_HEIGHTS[self.item.item_id]
         # if len(found_items.tables[self.shelf].markers) > 0:
         #     desired_pose = found_items.tables[self.shelf].markers[0].pose
-        if len(found_items.tables[self.shelf].markers) == 0:
+        THRESHOLD = 0.03
+        num_possible = 0
+        for mark in found_items.tables[self.shelf].markers:
+            print('Possible marker', mark.scale)
+            second_biggest = max(mark.scale.x, mark.scale.y)
+            if abs(mark.scale.z - item_height) < THRESHOLD and abs(second_biggest - item_width) < THRESHOLD:
+                num_possible = num_possible + 1
+
+        if len(found_items.tables[self.shelf].markers) == 0 or num_possible == 0:
             print('Found no items RECURSION IS AWESOME!')
-            return self.locate_item()
+            if recursion_depth is None:
+                recursion_depth = 0
+            return self.locate_item(recursion_depth + 1)
 
         for mark in found_items.tables[self.shelf].markers:
             # print('Marker', mark)
-            sqrd_wid = (mark.scale.x - item_width) ** 2
+            second_biggest = max(mark.scale.x, mark.scale.y)
+            sqrd_wid = (second_biggest - item_width) ** 2
             sqrd_heit = (mark.scale.z - item_height) ** 2
             fork_spoons = math.sqrt(sqrd_wid + sqrd_heit)
             print('CURR SCALE:', mark.scale)
@@ -183,6 +239,8 @@ class Item(object):
                 min_distance = fork_spoons
                 min_item = mark
 
+        # TODO if two items are the same pick the one that is closer
+        # TODO once the bounding box was just really bad. also include left and right?
 
         print('FOUND MIN DISTANCE', min_distance, 'with desired pose', min_item.pose)
         print('SCALE:', min_item.scale)
@@ -200,11 +258,30 @@ class Item(object):
             # desired_pose = self.transform_from_marker(desired_pose, - min_item.scale.x / 2 + 0.03, 0, min_item.scale.z / 2 - 0.03)
 
             # desired_pose = self.transform_from_marker(desired_pose, - min_item.scale.x / 2, 0, min_item.scale.z / 2 - 0.03)
-            pass
-        if self.item.item_id == 2:
+            print('Cheezit transform yo')
+            # TODO(emersonn): TO FIX CHEEZITS WE WOULD NEED TO MOVE CLOSER SPECIFICALLY!!!!!
+            desired_pose = transform_by_part(desired_pose, 0, 0, min_item.scale.z / 2 - 0.08)
+        if self.item.item_id == 2 or self.item.item_id == 3:
             print('Pasta transform')
             desired_pose = transform_by_part(desired_pose, 0, .02, min_item.scale.z / 2 + 0.02)
 
+        quaternion = (
+            desired_pose.orientation.x,
+            desired_pose.orientation.y,
+            desired_pose.orientation.z,
+            desired_pose.orientation.w)
+        euler = tft.euler_from_quaternion(quaternion)
+        roll = euler[0]
+        pitch = euler[1]
+        yaw = euler[2]
+        """
+        if yaw < 1 or yaw > 2:
+            print("roll", roll, "pitch", pitch, "yaw", yaw)
+            print('Bad yaw Try again!')
+            return self.locate_item()
+
+        """
+        print("good!", "roll", roll, "pitch", pitch, "yaw", yaw)
         if desired_pose is None:
             # TODO ITEM NOT FOUND. Tell store worker.
             pass
@@ -251,15 +328,16 @@ class Item(object):
         # print("Attempting to grab item at:", desired_pose)
         # TODO(emersonn): We should also move out before we move it
         print("WTF DESIRED POSE????", desired_pose)
+        #self.goback.execute()
         done = self.program.execute(desired_pose=desired_pose)
         if done:
+            # TODO karan make sure these only happen in order
             self.goback.execute()
             new_msg = std_msgs.msg.Bool()
             new_msg.data = True
             clear_pub.publish(new_msg)
             self.drop.execute()
             self.raisez.execute()
-            # self.tuck.execute()
-            self.goforward.execute()
-
+            self.tuck.execute()
+            #self.goforward.execute()
         return done

@@ -117,6 +117,9 @@ def get_info(cart, stock):
 				cart._add(name, count, stock)
 			elif answer == "del":
 				cart._del(name)
+			elif answer == "cancel":
+				print "returning",int(raw_answer.split(" ")[1])
+				return int(raw_answer.split(" ")[1])
 			elif answer == "status":
 				print finished[name]
 		except:
@@ -143,16 +146,20 @@ def main():
 		while not done:
 			done = get_info(cart, stock)
 		try:
-			items = cart._contents(stock)
-			response = str(send_order(HandleOrderRequest.ORDER,items)).split(" ")[1]
-			print "Your order number is",response
-			stocker = acciobot_main.msg.ItemStock()
-			stocker.items = items
-			stocker.header = std_msgs.msg.Header()
-			for x in stocker.items:
-				x.quantity = -1 * x.quantity
-			order_pub.publish(stocker)
-			finished[int(response)] = "SUBMITTED"
+			if done == True:
+				items = cart._contents(stock)
+				response = send_order(HandleOrderRequest.ORDER,items,0)
+				print "Your order number is",response.id
+				stocker = acciobot_main.msg.ItemStock()
+				stocker.items = items
+				stocker.header = std_msgs.msg.Header()
+				for x in stocker.items:
+					x.quantity = -1 * x.quantity
+				order_pub.publish(stocker)
+				finished[int(response.id)] = "SUBMITTED"
+			else:
+				response = str(send_order(HandleOrderRequest.CANCEL,items,done))
+				print "Cancelled order"
 		except rospy.ServiceException as exc:
 			print("Service did not process request: " + str(exc))
 

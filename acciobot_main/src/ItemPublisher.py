@@ -24,7 +24,7 @@ def create_default_items():
 	first_item = acciobot_main.msg.Item()
 	first_item.item_name = "Cheezits"
 	first_item.item_id = 1
-	first_item.item_type = "left1"
+	first_item.item_type = "sunleft"
 	first_item.quantity = 4
 	first_item.feducial_id = 14
 
@@ -45,7 +45,7 @@ def create_default_items():
 	fourth_item = acciobot_main.msg.Item()
 	fourth_item.item_name = "Cereal"
 	fourth_item.item_id = 4
-	fourth_item.item_type = "left1"
+	fourth_item.item_type = "sunleft"
 	fourth_item.quantity = 3
 	fourth_item.feducial_id = 15
 
