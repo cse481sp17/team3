@@ -22,8 +22,10 @@ class StationInformation(object):
                     # Holds raw info from map annotator about stations
                     self.station_info = pickle.load(f)
                     self.station_info['cashier'] = copy.deepcopy(self.station_info['cashier'])
+                    self.station_info['cashier'].pose.header.frame_id = 'map'
                     self.station_info['cashier'].pose.pose.position.x = 4.9
                     self.station_info['cashier'].pose.pose.position.y = 4.69
+                    self.station_info['station1'].pose.header.frame_id = 'map'
                     self.station_info['station1'].pose.pose.position.x = 6.03
                     self.station_info['station1'].pose.pose.position.y = 3.59
         except EOFError:
