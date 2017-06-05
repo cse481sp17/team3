@@ -26,6 +26,7 @@ rospy.sleep(1)
 voice = 'voice_kal_diphone'
 
 clear_pub = rospy.Publisher('accio_clear_collisions', std_msgs.msg.Bool, queue_size=5)
+coll_list_pub = rospy.Publisher('accio_collisions', acciobot_main.msg.CollisionList, queue_size=5)
 
 HARDCODED_LOL_HEIGHTS = {
 1: 0.21,
@@ -183,6 +184,10 @@ class Item(object):
         if recursion_depth is not None and recursion_depth > 5:
             return False
 
+        new_msg = std_msgs.msg.Bool()
+        new_msg.data = True
+        clear_pub.publish(new_msg)
+
         # print('UNCOMMEN THIS')
         if not self.torsoed:
             self.shelf_program.execute()
@@ -242,6 +247,27 @@ class Item(object):
                 min_distance = fork_spoons
                 min_item = mark
 
+        non_item_markers = []
+        for shelf in range(4):
+            for mark in found_items.tables[shelf].markers:
+                if mark != min_item:
+                    new_coll = acciobot_main.msg.BoxCollision()
+                    width = max(mark.scale.x, mark.scale.y)
+                    depth = min(mark.scale.x, mark.scale.y)
+
+                    new_coll.pose = copy.deepcopy(mark.pose)
+                    new_coll.scale = copy.deepcopy(mark.scale)
+
+                    new_coll.scale.y = width
+                    new_coll.scale.x = depth
+
+                    non_item_markers.append(new_coll)
+        print("We found", len(non_item_markers), "non-items")
+        new_coll_list = acciobot_main.msg.CollisionList()
+        new_coll_list.title = 'got_items'
+        new_coll_list.collisions = copy.deepcopy(non_item_markers)
+
+        coll_list_pub.publish(new_coll_list)
 
         # TODO if two items are the same pick the one that is closer
         # TODO once the bounding box was just really bad. also include left and right?
