@@ -4,9 +4,9 @@
   <node pkg="acciobot_main" type="ItemPublisher.py" name="item_publisher" output="screen" ></node>
 
   <!-- roslaunch fetch_api ar_desktop.launch cam_image_topic:=mock_point_cloud -->
-  <include file="$(find fetch_api)/launch/ar_desktop.launch">
+  <!-- <include file="$(find fetch_api)/launch/ar_desktop.launch">
     <arg name="cam_image_topic" value="$(arg cam_image_topic)" />
-  </include>
+  </include> -->
   <include file="$(find fetch_navigation)/launch/fetch_nav.launch">
     <arg name="map_file" value="/home/team3/maps/cse691.yaml" />
   </include>
