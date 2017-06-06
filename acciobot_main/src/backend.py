@@ -110,8 +110,8 @@ def main():
             order = order_handler.remove_order(robot_state.get_current_order())
             success = order.fulfill_order()
             # TODO: Uncomment when navigation is ready
-            print("press enter to continue")
-            raw_input()
+            print("press enter to continue [removed]")
+            # raw_input()
             navigator.move_to_posestamped(station_handler.get_cashier().location)
             robot_state.finished_order()
         rospy.sleep(1)

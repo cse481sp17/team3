@@ -104,8 +104,8 @@ class Order(object):
                 tries += 1
 
                 if not done:
-                    print("Couldn't find the item, going back to retry the entire item")
-                    raw_input()
+                    print("Couldn't find the item, going back to retry the entire item [removed]")
+                    # raw_input()
                     item.goback.execute()
                 if tries == 2 and not done:
                     print('We tried two times and meh for item')
@@ -132,8 +132,8 @@ class Station(object):
 
     # Navigates Fetch to the location of this station
     def attract_fetch(self):
-        print("Going to station", self.station_id, "press enter to continue")
-        raw_input()
+        print("Going to station", self.station_id, "press enter to continue [removed]")
+        # raw_input()
         self.navigator.move_to_posestamped(self.location) #TODO uncomment this
 
 class Item(object):
@@ -155,7 +155,7 @@ class Item(object):
         self.torsoed = False
 
     def fulfill_item(self):
-        self.go_to_item()
+        # self.go_to_item()
         desired_pose = self.locate_item()
         done = False
 

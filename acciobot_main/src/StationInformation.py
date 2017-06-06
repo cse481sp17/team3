@@ -23,11 +23,23 @@ class StationInformation(object):
                     self.station_info = pickle.load(f)
                     self.station_info['cashier'] = copy.deepcopy(self.station_info['cashier'])
                     # self.station_info['cashier'].pose.header.frame_id = 'map'
-                    self.station_info['cashier'].pose.pose.position.x = 4.9
-                    self.station_info['cashier'].pose.pose.position.y = 4.69
+                    self.station_info['cashier'].pose.pose.position.x = 1.4
+                    self.station_info['cashier'].pose.pose.position.y = 0.68
+                    self.station_info['cashier'].pose.pose.position.z = 0.0
+
+                    self.station_info['cashier'].pose.pose.orientation.x = 0
+                    self.station_info['cashier'].pose.pose.orientation.y = 0
+                    self.station_info['cashier'].pose.pose.orientation.z = -0.9
+                    self.station_info['cashier'].pose.pose.orientation.w = 0.042
                     # self.station_info['station1'].pose.header.frame_id = 'map'
-                    self.station_info['station1'].pose.pose.position.x = 6.03
-                    self.station_info['station1'].pose.pose.position.y = 3.59
+                    self.station_info['station1'].pose.pose.position.x = -3.08
+                    self.station_info['station1'].pose.pose.position.y = -0.46
+                    self.station_info['station1'].pose.pose.position.z = 0.0
+
+                    self.station_info['station1'].pose.pose.orientation.x = 0
+                    self.station_info['station1'].pose.pose.orientation.y = 0
+                    self.station_info['station1'].pose.pose.orientation.z = -0.99
+                    self.station_info['station1'].pose.pose.orientation.w = 0.0705
         except EOFError:
             print("couldn't load stations")
             wtf = geometry_msgs.msg.PoseWithCovarianceStamped()

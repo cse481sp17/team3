@@ -461,8 +461,8 @@ class MoveAction(Action):
             marker_pub_WTFLOL.publish(new_marker)
 
             # TODO(emersonn): THIS IS WHERE THINGS GO
-            print("Hit enter to continue")
-            raw_input()
+            print("Hit enter to continue [removed]")
+            # raw_input()
 
             # print('Trying to move to pose:', new_pose)
 

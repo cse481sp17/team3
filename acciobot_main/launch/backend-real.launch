@@ -8,7 +8,7 @@
     <arg name="cam_image_topic" value="$(arg cam_image_topic)" />
   </include>
   <include file="$(find fetch_navigation)/launch/fetch_nav.launch">
-    <arg name="map_file" value="/home/team3/maps/real_robot_take_1.yaml" />
+    <arg name="map_file" value="/home/team3/maps/cse691.yaml" />
   </include>
   <include file="$(find fetch_api)/launch/move_group.launch" />
 
