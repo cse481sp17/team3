@@ -155,7 +155,7 @@ class Item(object):
         self.torsoed = False
 
     def fulfill_item(self):
-        # self.go_to_item()
+        self.go_to_item()
         desired_pose = self.locate_item()
         done = False
 
